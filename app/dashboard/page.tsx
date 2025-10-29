@@ -15,32 +15,70 @@ export default async function DashboardPage() {
     redirect('/login');
   }
 
-  // Get user data with credits
-  let { data: user } = await supabaseAdmin
+  // Get user data with account credits
+  let { data: user, error: userError } = await supabaseAdmin
     .from('users')
-    .select('id, email, credits')
+    .select(`
+      id,
+      email,
+      name,
+      account_id,
+      accounts:account_id (
+        credits_remaining
+      )
+    `)
     .eq('email', authUser.email)
     .single();
 
-  // If user doesn't exist in users table, create them
-  if (!user) {
+  // If user doesn't exist in users table, create them with a personal account
+  if (!user || userError) {
+    console.log('User not found, creating new user and account...');
+
+    // First create an account for this user
+    const { data: newAccount, error: accountError } = await supabaseAdmin
+      .from('accounts')
+      .insert({
+        company_name: authUser.email?.split('@')[1] || 'Personal Account',
+        credits_remaining: 0,
+      })
+      .select('id')
+      .single();
+
+    if (accountError || !newAccount) {
+      console.error('Error creating account:', accountError);
+      redirect('/login');
+    }
+
+    // Then create the user linked to this account
     const { data: newUser, error: createError } = await supabaseAdmin
       .from('users')
       .insert({
         id: authUser.id,
-        email: authUser.email,
-        credits: 0,
+        account_id: newAccount.id,
+        email: authUser.email!,
+        name: authUser.email?.split('@')[0] || 'User',
+        role: 'owner',
       })
-      .select('id, email, credits')
+      .select(`
+        id,
+        email,
+        name,
+        account_id,
+        accounts:account_id (
+          credits_remaining
+        )
+      `)
       .single();
 
-    if (createError) {
+    if (createError || !newUser) {
       console.error('Error creating user:', createError);
       redirect('/login');
     }
 
     user = newUser;
   }
+
+  const credits = (user.accounts as any)?.credits_remaining || 0;
 
   // Get note counts
   const { count: notesSent } = await supabaseAdmin
@@ -60,8 +98,6 @@ export default async function DashboardPage() {
     .select('*', { count: 'exact', head: true })
     .eq('user_id', user.id)
     .eq('status', 'delivered');
-
-  const credits = user.credits || 0;
 
   return (
     <div className="min-h-screen bg-gray-50">
