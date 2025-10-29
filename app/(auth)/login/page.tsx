@@ -16,10 +16,17 @@ export default function LoginPage() {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const router = useRouter();
 
-  const supabaseConfig = useMemo(
-    () => getSupabaseClientConfig({ allowUndefined: true, context: 'login page' }),
-    []
-  );
+  const supabaseConfig = useMemo(() => {
+    // Debug: log what env vars are available
+    if (typeof window !== 'undefined') {
+      console.log('Environment check:', {
+        hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+        hasKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+        url: process.env.NEXT_PUBLIC_SUPABASE_URL?.substring(0, 20) + '...',
+      });
+    }
+    return getSupabaseClientConfig({ allowUndefined: true, context: 'login page' });
+  }, []);
 
   const supabase = useMemo(() => {
     if (!supabaseConfig) {
