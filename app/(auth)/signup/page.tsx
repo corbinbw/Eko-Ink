@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { useMemo, useState } from 'react';
+import { createBrowserClient } from '@supabase/ssr';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { getSupabaseClientConfig } from '@/lib/supabase/config';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,12 +19,34 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const router = useRouter();
-  const supabase = createClientComponentClient();
+
+  const supabaseConfig = useMemo(
+    () => getSupabaseClientConfig({ allowUndefined: true, context: 'signup page' }),
+    []
+  );
+
+  const supabase = useMemo(() => {
+    if (!supabaseConfig) {
+      return null;
+    }
+    return createBrowserClient(supabaseConfig.url, supabaseConfig.anonKey);
+  }, [supabaseConfig]);
+
+  const isDisabled = loading || !supabase;
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setMessage(null);
+
+    if (!supabase) {
+      setMessage({
+        type: 'error',
+        text: 'Supabase is not configured. Please contact support.',
+      });
+      setLoading(false);
+      return;
+    }
 
     // Validate passwords match
     if (formData.password !== formData.confirmPassword) {
@@ -90,6 +113,13 @@ export default function SignupPage() {
           </p>
         </div>
 
+        {!supabaseConfig && (
+          <div className="rounded-md bg-yellow-50 p-4 text-sm text-yellow-800">
+            Supabase credentials are not configured for this deployment. Set the required environment
+            variables before using the signup form.
+          </div>
+        )}
+
         <form onSubmit={handleSignup} className="mt-8 space-y-6">
           <div className="space-y-4">
             <div>
@@ -104,7 +134,7 @@ export default function SignupPage() {
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
                 placeholder="John Doe"
-                disabled={loading}
+                disabled={isDisabled}
               />
             </div>
 
@@ -120,7 +150,7 @@ export default function SignupPage() {
                 onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
                 className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
                 placeholder="Acme Inc"
-                disabled={loading}
+                disabled={isDisabled}
               />
             </div>
 
@@ -136,7 +166,7 @@ export default function SignupPage() {
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
                 placeholder="you@company.com"
-                disabled={loading}
+                disabled={isDisabled}
               />
             </div>
 
@@ -152,7 +182,7 @@ export default function SignupPage() {
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
                 placeholder="Minimum 6 characters"
-                disabled={loading}
+                disabled={isDisabled}
               />
             </div>
 
@@ -168,7 +198,7 @@ export default function SignupPage() {
                 onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                 className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
                 placeholder="Re-enter your password"
-                disabled={loading}
+                disabled={isDisabled}
               />
             </div>
           </div>
