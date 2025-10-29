@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createServiceClient } from '@/lib/supabase/server';
+import { getSupabaseClientConfig } from '@/lib/supabase/config';
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,17 +15,24 @@ export async function GET(request: NextRequest) {
     }
 
     // Create a Supabase client with the user's token
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        global: {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+    const supabaseConfig = getSupabaseClientConfig({
+      context: 'app/api/notes/route.ts',
+    });
+
+    if (!supabaseConfig) {
+      return NextResponse.json(
+        { error: 'Supabase environment variables are not configured.' },
+        { status: 500 }
+      );
+    }
+
+    const supabase = createClient(supabaseConfig.url, supabaseConfig.anonKey, {
+      global: {
+        headers: {
+          Authorization: `Bearer ${token}`,
         },
-      }
-    );
+      },
+    });
 
     // Get the current user
     const { data: { user }, error: authError } = await supabase.auth.getUser();

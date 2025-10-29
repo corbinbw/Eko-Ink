@@ -1,14 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
-export default function CreditsSuccessPage() {
+function CreditsSuccessPageContent() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get('session_id');
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     // Give webhook a moment to process
@@ -104,5 +103,22 @@ export default function CreditsSuccessPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function CreditsSuccessPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-gray-50">
+          <div className="text-center">
+            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
+            <p className="mt-4 text-gray-600">Loading payment status...</p>
+          </div>
+        </div>
+      }
+    >
+      <CreditsSuccessPageContent />
+    </Suspense>
   );
 }

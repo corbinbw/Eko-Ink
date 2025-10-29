@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { getSupabaseClientConfig } from '@/lib/supabase/config';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -13,21 +14,32 @@ export default function LoginPage() {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const router = useRouter();
 
-  // Debug: Log environment variables
-  console.log('Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
-  console.log('Supabase Key exists:', !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  const supabaseConfig = useMemo(
+    () => getSupabaseClientConfig({ allowUndefined: true, context: 'login page' }),
+    []
   );
+
+  const supabase = useMemo(() => {
+    if (!supabaseConfig) {
+      return null;
+    }
+    return createBrowserClient(supabaseConfig.url, supabaseConfig.anonKey);
+  }, [supabaseConfig]);
+
+  const isDisabled = loading || !supabase;
 
   const handlePasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setMessage(null);
 
-    console.log('Login attempt started for:', email);
+    if (!supabase) {
+      setMessage({
+        type: 'error',
+        text: 'Supabase is not configured. Please contact support.',
+      });
+      return;
+    }
 
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -35,18 +47,13 @@ export default function LoginPage() {
         password,
       });
 
-      console.log('Login response:', { data, error });
-
       if (error) {
-        console.error('Login error:', error);
         throw error;
       }
 
-      console.log('Login successful, redirecting to dashboard...');
       router.push('/dashboard');
       router.refresh();
     } catch (error: any) {
-      console.error('Caught error:', error);
       setMessage({
         type: 'error',
         text: error.message || 'Failed to sign in',
@@ -60,6 +67,14 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setMessage(null);
+
+    if (!supabase) {
+      setMessage({
+        type: 'error',
+        text: 'Supabase is not configured. Please contact support.',
+      });
+      return;
+    }
 
     try {
       const { error } = await supabase.auth.signInWithOtp({
@@ -103,6 +118,13 @@ export default function LoginPage() {
           )}
         </div>
 
+        {!supabaseConfig && (
+          <div className="rounded-md bg-yellow-50 p-4 text-sm text-yellow-800">
+            Supabase credentials are not configured for this deployment. Set the required environment
+            variables before using the login form.
+          </div>
+        )}
+
         <form onSubmit={useMagicLink ? handleMagicLinkLogin : handlePasswordLogin} className="mt-8 space-y-6">
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700">
@@ -116,7 +138,7 @@ export default function LoginPage() {
               onChange={(e) => setEmail(e.target.value)}
               className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
               placeholder="you@example.com"
-              disabled={loading}
+              disabled={isDisabled}
             />
           </div>
 
@@ -133,7 +155,7 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
                 placeholder="Enter your password"
-                disabled={loading}
+                disabled={isDisabled}
               />
             </div>
           )}
@@ -150,7 +172,7 @@ export default function LoginPage() {
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={isDisabled}
             className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? (useMagicLink ? 'Sending...' : 'Signing in...') : (useMagicLink ? 'Send magic link' : 'Sign in')}
