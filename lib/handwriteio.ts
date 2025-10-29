@@ -61,15 +61,19 @@ class HandwriteIOClient {
 
   constructor(apiKey?: string) {
     this.apiKey = apiKey || API_KEY || '';
-    if (!this.apiKey) {
-      throw new Error('Handwrite.io API key is required');
-    }
+    // Don't throw error during construction to allow build-time imports
+    // Error will be thrown when actually trying to make API calls
   }
 
   private async request<T>(
     endpoint: string,
     options: RequestInit = {}
   ): Promise<T> {
+    // Check for API key at request time, not construction time
+    if (!this.apiKey) {
+      throw new Error('Handwrite.io API key is required. Please set HANDWRITEIO_API_KEY environment variable.');
+    }
+
     const url = `${HANDWRITE_API_BASE}${endpoint}`;
 
     const response = await fetch(url, {
