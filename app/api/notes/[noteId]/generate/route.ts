@@ -83,14 +83,14 @@ export async function POST(
       ];
 
       const moments = sentences
-        .filter((sentence) =>
-          importantKeywords.some((keyword) =>
+        .filter((sentence: string) =>
+          importantKeywords.some((keyword: string) =>
             sentence.toLowerCase().includes(keyword)
           )
         )
         .slice(0, 3)
-        .map((s) => s.trim())
-        .filter((s) => s.length > 0);
+        .map((s: string) => s.trim())
+        .filter((s: string) => s.length > 0);
 
       keyMoments = moments.join('. ');
 
