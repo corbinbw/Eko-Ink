@@ -13,11 +13,11 @@ const anthropic = new Anthropic({
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { noteId: string } }
+  { params }: { params: Promise<{ noteId: string }> }
 ) {
   try {
     const supabase = createServiceClient();
-    const { noteId } = params;
+    const { noteId } = await params;
 
     // Get the note with its deal and call data
     const { data: note, error: noteError } = await supabase
