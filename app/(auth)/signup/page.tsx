@@ -1,10 +1,9 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { createBrowserClient } from '@supabase/ssr';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { getSupabaseClientConfig } from '@/lib/supabase/config';
+import { createClientSupabase } from '@/lib/supabase/client-config';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,21 +17,20 @@ export default function SignupPage() {
   });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [supabase, setSupabase] = useState<any>(null);
+  const [configLoading, setConfigLoading] = useState(true);
   const router = useRouter();
 
-  const supabaseConfig = useMemo(
-    () => getSupabaseClientConfig({ allowUndefined: true, context: 'signup page' }),
-    []
-  );
-
-  const supabase = useMemo(() => {
-    if (!supabaseConfig) {
-      return null;
+  useEffect(() => {
+    async function initSupabase() {
+      const client = await createClientSupabase();
+      setSupabase(client);
+      setConfigLoading(false);
     }
-    return createBrowserClient(supabaseConfig.url, supabaseConfig.anonKey);
-  }, [supabaseConfig]);
+    initSupabase();
+  }, []);
 
-  const isDisabled = loading || !supabase;
+  const isDisabled = loading || !supabase || configLoading;
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -113,7 +111,7 @@ export default function SignupPage() {
           </p>
         </div>
 
-        {!supabaseConfig && (
+        {!supabase && !configLoading && (
           <div className="rounded-md bg-yellow-50 p-4 text-sm text-yellow-800">
             Supabase credentials are not configured for this deployment. Set the required environment
             variables before using the signup form.
