@@ -7,20 +7,27 @@ import SignatureManager from './SignatureManager';
 interface User {
   id: string;
   email: string;
-  first_name: string;
-  last_name: string;
+  name: string;
+  role: string;
+  account_id: string;
   signature_image_url: string | null;
-  notes_sent_count: number;
-  learning_complete: boolean;
+  accounts: {
+    credits_remaining: number;
+    company_name: string;
+  } | null;
 }
 
 interface SettingsClientProps {
   user: User;
+  notesSent: number;
 }
 
-export default function SettingsClient({ user: initialUser }: SettingsClientProps) {
+export default function SettingsClient({ user: initialUser, notesSent }: SettingsClientProps) {
   const router = useRouter();
   const [user, setUser] = useState(initialUser);
+
+  const credits = (user.accounts as any)?.credits_remaining || 0;
+  const companyName = (user.accounts as any)?.company_name || 'N/A';
 
   const handleSave = async (signatureData: string) => {
     const response = await fetch('/api/user/signature', {
@@ -86,31 +93,27 @@ export default function SettingsClient({ user: initialUser }: SettingsClientProp
               <div className="space-y-4">
                 <div>
                   <label className="text-xs font-medium text-gray-500 uppercase">Name</label>
-                  <p className="mt-1 text-sm text-gray-900">
-                    {user.first_name} {user.last_name}
-                  </p>
+                  <p className="mt-1 text-sm text-gray-900">{user.name}</p>
                 </div>
                 <div>
                   <label className="text-xs font-medium text-gray-500 uppercase">Email</label>
                   <p className="mt-1 text-sm text-gray-900">{user.email}</p>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-500 uppercase">Notes Sent</label>
-                  <p className="mt-1 text-sm text-gray-900">{user.notes_sent_count || 0} / 25</p>
+                  <label className="text-xs font-medium text-gray-500 uppercase">Role</label>
+                  <p className="mt-1 text-sm text-gray-900 capitalize">{user.role}</p>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-500 uppercase">Learning Status</label>
-                  <p className="mt-1">
-                    {user.learning_complete ? (
-                      <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
-                        Complete
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-800">
-                        In Progress
-                      </span>
-                    )}
-                  </p>
+                  <label className="text-xs font-medium text-gray-500 uppercase">Company</label>
+                  <p className="mt-1 text-sm text-gray-900">{companyName}</p>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500 uppercase">Notes Sent</label>
+                  <p className="mt-1 text-sm text-gray-900">{notesSent}</p>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500 uppercase">Credits Remaining</label>
+                  <p className="mt-1 text-2xl font-semibold text-gray-900">{credits}</p>
                 </div>
               </div>
             </div>
