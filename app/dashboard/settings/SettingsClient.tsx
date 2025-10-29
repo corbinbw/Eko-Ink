@@ -14,6 +14,9 @@ interface User {
   accounts: {
     credits_remaining: number;
     company_name: string;
+  }[] | {
+    credits_remaining: number;
+    company_name: string;
   } | null;
 }
 
@@ -26,8 +29,10 @@ export default function SettingsClient({ user: initialUser, notesSent }: Setting
   const router = useRouter();
   const [user, setUser] = useState(initialUser);
 
-  const credits = (user.accounts as any)?.credits_remaining || 0;
-  const companyName = (user.accounts as any)?.company_name || 'N/A';
+  // Handle accounts being either an array or single object
+  const accountData = Array.isArray(user.accounts) ? user.accounts[0] : user.accounts;
+  const credits = accountData?.credits_remaining || 0;
+  const companyName = accountData?.company_name || 'N/A';
 
   const handleSave = async (signatureData: string) => {
     const response = await fetch('/api/user/signature', {
