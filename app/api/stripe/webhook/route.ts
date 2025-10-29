@@ -3,12 +3,12 @@ import type { NextRequest } from 'next/server';
 import Stripe from 'stripe';
 import { createServiceClient } from '@/lib/supabase/server';
 
-// Initialize Stripe
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-09-30.clover',
-});
-
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
+// Lazy initialize Stripe to avoid build-time errors
+function getStripe() {
+  return new Stripe(process.env.STRIPE_SECRET_KEY || '', {
+    apiVersion: '2025-09-30.clover',
+  });
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,9 +19,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No signature' }, { status: 400 });
     }
 
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
+
     // Verify webhook signature
     let event: Stripe.Event;
     try {
+      const stripe = getStripe();
       event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
     } catch (err: any) {
       console.error('Webhook signature verification failed:', err.message);
