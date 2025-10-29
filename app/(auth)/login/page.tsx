@@ -1,10 +1,9 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { createBrowserClient } from '@supabase/ssr';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { getSupabaseClientConfig } from '@/lib/supabase/config';
+import { createClientSupabase, getClientSupabaseConfig } from '@/lib/supabase/client-config';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,28 +13,20 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [useMagicLink, setUseMagicLink] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [supabase, setSupabase] = useState<any>(null);
+  const [configLoading, setConfigLoading] = useState(true);
   const router = useRouter();
 
-  const supabaseConfig = useMemo(() => {
-    // Debug: log what env vars are available
-    if (typeof window !== 'undefined') {
-      console.log('Environment check:', {
-        hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-        hasKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-        url: process.env.NEXT_PUBLIC_SUPABASE_URL?.substring(0, 20) + '...',
-      });
+  useEffect(() => {
+    async function initSupabase() {
+      const client = await createClientSupabase();
+      setSupabase(client);
+      setConfigLoading(false);
     }
-    return getSupabaseClientConfig({ allowUndefined: true, context: 'login page' });
+    initSupabase();
   }, []);
 
-  const supabase = useMemo(() => {
-    if (!supabaseConfig) {
-      return null;
-    }
-    return createBrowserClient(supabaseConfig.url, supabaseConfig.anonKey);
-  }, [supabaseConfig]);
-
-  const isDisabled = loading || !supabase;
+  const isDisabled = loading || !supabase || configLoading;
 
   const handlePasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -127,7 +118,7 @@ export default function LoginPage() {
           )}
         </div>
 
-        {!supabaseConfig && (
+        {!supabase && !configLoading && (
           <div className="rounded-md bg-yellow-50 p-4 text-sm text-yellow-800">
             Supabase credentials are not configured for this deployment. Set the required environment
             variables before using the login form.

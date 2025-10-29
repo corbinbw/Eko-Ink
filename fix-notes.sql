@@ -2,3 +2,5 @@
 UPDATE notes 
 SET draft_text = NULL, status = 'pending'
 WHERE draft_text = 'Generating note...' OR draft_text = '';
+
+
