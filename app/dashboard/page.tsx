@@ -16,14 +16,30 @@ export default async function DashboardPage() {
   }
 
   // Get user data with credits
-  const { data: user } = await supabaseAdmin
+  let { data: user } = await supabaseAdmin
     .from('users')
     .select('id, email, credits')
     .eq('email', authUser.email)
     .single();
 
+  // If user doesn't exist in users table, create them
   if (!user) {
-    redirect('/login');
+    const { data: newUser, error: createError } = await supabaseAdmin
+      .from('users')
+      .insert({
+        id: authUser.id,
+        email: authUser.email,
+        credits: 0,
+      })
+      .select('id, email, credits')
+      .single();
+
+    if (createError) {
+      console.error('Error creating user:', createError);
+      redirect('/login');
+    }
+
+    user = newUser;
   }
 
   // Get note counts
