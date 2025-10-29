@@ -92,6 +92,11 @@ export async function POST(request: NextRequest) {
       userData = newUser;
     }
 
+    // Ensure we have user data at this point
+    if (!userData) {
+      return NextResponse.json({ error: 'Failed to get or create user' }, { status: 500 });
+    }
+
     // Handle audio upload if file provided
     let mp3StoragePath = null;
     let mp3Url = audioUrl;
