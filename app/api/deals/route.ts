@@ -176,6 +176,7 @@ export async function POST(request: NextRequest) {
         deal_id: deal.id,
         user_id: userData.id,
         call_id: call.id,
+        draft_text: 'Generating note...', // Placeholder until AI generates the actual note
         status: 'pending', // Pending until AI generates the note
         requires_approval: true,
       })
