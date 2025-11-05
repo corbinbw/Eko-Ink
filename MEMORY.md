@@ -3,7 +3,7 @@
 ## Project Overview
 EkoInk is a handwritten thank you note automation system for car dealerships. Sales representatives submit deal information via a public form, and the system generates personalized AI-powered thank you notes that can be sent as handwritten cards.
 
-## Current Status (Updated: October 15, 2025)
+## Current Status (Updated: November 5, 2025)
 
 ### ✅ Working Features
 1. **Authentication System**
@@ -128,7 +128,26 @@ ASSEMBLYAI_API_KEY=d2fecc53765a4dc2808f83a0081fd3e7
 - Users can only access their own data
 - Public insert on deals/calls/notes for the submission form (sets user_id from form data)
 
-### 🚀 Recent Changes (This Session)
+### 🚀 Recent Changes
+
+#### November 5, 2025 - UI/UX Improvements & Team Planning
+- Added EkoInk logo as favicon (icon.png in /app directory)
+- Updated all dashboard headers with cream background (#f8f7f2) to match logo
+- Increased logo size in headers (h-8 to h-12)
+- Added payment history feature to settings page
+  - Created PaymentHistory.tsx component
+  - Created /api/user/transactions endpoint
+  - Updated webhook and process-session APIs to log transactions
+- Added real-time credit balance fetching on credits page
+- Improved dark mode styling throughout the app
+- **Team Management Planning:**
+  - Comprehensive analysis of hierarchical team system
+  - Defined 4 user personas (Solo Rep, Team Rep, Manager, Executive, Super Admin)
+  - Created detailed implementation plan for role-based access
+  - Planned MVP features (simplified approach focusing on Manager + Rep roles)
+  - See HIERARCHICAL_TEAMS_PLAN.md for full details
+
+#### Previous Session
 
 #### Password Authentication Added
 - Switched from magic links to password authentication
@@ -169,36 +188,46 @@ ASSEMBLYAI_API_KEY=d2fecc53765a4dc2808f83a0081fd3e7
    - Active server: faef7d
 
 ### 📝 Next Steps / TODO
-1. **Review & Approve Flow**
-   - Implement the "Review & Approve" button functionality
-   - Update note status from 'draft' to 'approved'
-   - Allow editing of draft text before approval
 
-2. **Handwriting Service Integration**
-   - Research handwriting APIs (Handwrytten, Thankster, etc.)
-   - Add API integration to send approved notes
-   - Update note status to 'sent' after successful send
-   - Store tracking information
+#### Priority 1: Team Management System (MVP)
+1. **Database Migration**
+   - Run hierarchical teams migration (see migrations/ folder)
+   - Add role, manager_id, invite_code fields to users table
+   - Update RLS policies for role-based access
 
-3. **Dashboard Enhancements**
-   - Add statistics (total deals, notes sent, etc.)
-   - Show recent activity
-   - Add filtering/search for notes
+2. **Sign-up Flow Enhancement**
+   - Add role selection (Solo Rep, Manager, Team Rep)
+   - Implement invite code system
+   - Handle team joining via invite links
 
-4. **Note Management**
-   - Add ability to regenerate notes
-   - Add manual editing of notes
-   - Add preview of how note will look handwritten
+3. **Manager Dashboard**
+   - Create /dashboard/team page
+   - Show team members list
+   - Display team statistics
+   - Add invite link generator
+   - Credit purchasing for team
 
-5. **Error Handling**
-   - Better error messages for users
-   - Retry logic for failed transcriptions
-   - Handle cases where audio transcription fails
+4. **Role-Based UI**
+   - Show/hide features based on user role
+   - Update navigation for managers
+   - Add team credits display for reps
 
-6. **Code Cleanup**
-   - Fix Next.js 15 async API warnings
-   - Kill old dev servers
-   - Remove unused OpenAI code if fully switching to Anthropic
+#### Priority 2: Enhancements
+1. **Executive Dashboard** (when needed)
+   - Company-wide analytics
+   - Multi-team management
+   - Bulk credit purchasing
+
+2. **Super Admin Dashboard** (for you)
+   - All companies view
+   - Revenue analytics
+   - System monitoring
+
+3. **Advanced Features**
+   - Email notifications
+   - Webhook API for CRM integrations
+   - Advanced analytics & reporting
+   - Bulk operations
 
 ### 🎯 Current Working State
 The application is **fully functional** for the core workflow:
@@ -206,7 +235,131 @@ The application is **fully functional** for the core workflow:
 2. Login to dashboard ✓
 3. View all notes ✓
 4. Generate AI-powered thank you notes ✓
-5. **Next**: Review & Approve notes → Send to handwriting service
+5. Review & approve notes ✓
+6. Send to Handwrite.io ✓
+7. Track delivery ✓
+8. Purchase credits via Stripe ✓
+9. View payment history ✓
+
+**Working perfectly for single users. Next step: Add team management for managers who want to oversee multiple sales reps.**
+
+### 📊 Files Created This Session
+- `app/icon.png` - EkoInk logo favicon
+- `app/dashboard/settings/PaymentHistory.tsx` - Payment history component
+- `app/api/user/transactions/route.ts` - API to fetch transaction history
+- `app/api/user/credits/route.ts` - API to fetch current credit balance
+- `HIERARCHICAL_TEAMS_PLAN.md` - Comprehensive plan for team management system
+- `migrations/001-hierarchical-teams.sql` - Database migration for teams (ready but not run yet)
+- `migrations/README.md` - Migration instructions
+- `app/api/invites/generate/route.ts` - Generate invite codes API
+- `app/api/invites/validate/route.ts` - Validate invite codes API
+- Updated sign-up page with role selection UI
+
+### 🎨 UI/UX Changes This Session
+1. **Header Styling:**
+   - Changed background from white to cream (#f8f7f2) to blend with logo
+   - Increased logo size from h-8 to h-12 (50% larger)
+   - Applied across all dashboard pages
+
+2. **Settings Page:**
+   - Added full payment history section
+   - Shows all credit purchases with dates, amounts, and credits added
+   - Includes loading and empty states
+   - Full dark mode support
+
+3. **Credits Page:**
+   - Added real-time credit balance display
+   - Shows current balance at top of page
+   - Updates dynamically after purchase
+
+4. **Favicon:**
+   - EkoInk logo now appears in browser tab
+   - Works across all pages
+
+### 🚀 Team Management System - Ready to Build
+**Current State:** Fully planned and designed, code partially written but not deployed
+
+**What's Done:**
+- ✅ Database schema designed
+- ✅ Migration SQL written (not run yet)
+- ✅ Sign-up flow updated with role selection
+- ✅ Invite API endpoints created
+- ✅ User personas defined
+- ✅ Complete implementation plan documented
+
+**What's NOT Done Yet:**
+- ❌ Database migration not run
+- ❌ Manager dashboard doesn't exist
+- ❌ Team members list not built
+- ❌ Role-based navigation not implemented
+- ❌ Credit purchasing restrictions not added
+
+**To Continue:**
+1. Review the plan in HIERARCHICAL_TEAMS_PLAN.md
+2. Run the database migration (migrations/001-hierarchical-teams.sql)
+3. Test the sign-up flow with different roles
+4. Build the manager dashboard (/dashboard/team)
+
+### 🎯 Key Design Decisions Made
+
+#### MVP Scope (Simplified Approach)
+**Decision:** Start with only 2 roles (Rep + Manager), not the full 4-tier system
+- Solo Rep: Individual users who buy their own credits
+- Team Rep: Part of a team, manager buys credits
+- Manager: Oversees team, invites reps, purchases credits
+- ~~Executive~~ - Deferred until a customer needs it
+- ~~Super Admin~~ - You can use SQL/Supabase dashboard for now
+
+**Rationale:**
+- Faster to market
+- Less complexity to debug
+- Can add executive/admin later when needed
+- Most early customers will be managers with small teams
+
+#### Invite System Design
+**Decision:** One permanent invite code per manager (not one-time use)
+- Manager gets one code: `ekoink.com/signup?code=ABC123`
+- Code is permanent (doesn't expire by default)
+- Can be shared via email, Slack, etc.
+- Manager can regenerate if compromised
+
+**Rationale:**
+- Simpler than managing multiple codes
+- Less friction for team onboarding
+- Can add expiration/one-time-use later if needed
+
+#### Credit Management
+**Decision:** All credits at account level (company-wide pool)
+- No team-level credit separation
+- Managers/Executives purchase for entire account
+- All team members pull from same pool
+
+**Rationale:**
+- Much simpler to implement
+- Avoids "which pool do I use?" confusion
+- Can add team-level credits later if requested
+- Most customers prefer centralized billing
+
+#### Data Privacy
+**Decision:** Managers CAN see team member note content
+- Full visibility for coaching/QA
+- Not just stats, actual note text
+
+**Rationale:**
+- Managers need to coach their team
+- Quality control requires seeing actual content
+- Can add privacy toggle later if needed
+
+#### Approval Workflow
+**Decision:** Start with auto-approve (rep creates → sent immediately)
+- No manager approval required by default
+- Trust team members
+
+**Rationale:**
+- Faster workflow
+- Less micromanagement
+- Can add approval workflow later if requested
+- Most teams want speed over control
 
 ### 💡 Important Notes for Next Developer
 - Always use `createServiceClient()` for operations that bypass RLS

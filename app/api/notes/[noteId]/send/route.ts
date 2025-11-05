@@ -20,15 +20,36 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get user
+    // Get user with account credits
     const { data: user } = await supabaseAdmin
       .from('users')
-      .select('id')
+      .select(`
+        id,
+        account_id,
+        accounts:account_id (
+          credits_remaining
+        )
+      `)
       .eq('email', authUser.email)
       .single();
 
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // Check if user has credits
+    const accountData = Array.isArray(user.accounts) ? user.accounts[0] : user.accounts;
+    const creditsRemaining = (accountData as any)?.credits_remaining || 0;
+
+    if (creditsRemaining < 1) {
+      return NextResponse.json(
+        {
+          error: 'Insufficient credits',
+          message: 'You need at least 1 credit to send a note. Please purchase credits to continue.',
+          credits_remaining: creditsRemaining
+        },
+        { status: 402 } // Payment Required
+      );
     }
 
     // Get the note with deal and customer information
@@ -135,6 +156,25 @@ export async function POST(
         },
       });
 
+      // Deduct 1 credit from the account
+      const { error: creditError } = await supabaseAdmin
+        .from('accounts')
+        .update({
+          credits_remaining: creditsRemaining - 1,
+        })
+        .eq('id', user.account_id);
+
+      if (creditError) {
+        console.error('Error deducting credit:', creditError);
+        return NextResponse.json(
+          {
+            error: 'Failed to deduct credit',
+            details: creditError.message,
+          },
+          { status: 500 }
+        );
+      }
+
       // Update note with order information
       const { error: updateError } = await supabaseAdmin
         .from('notes')
@@ -179,6 +219,7 @@ export async function POST(
         status: result.status,
         tracking_number: result.tracking_number,
         estimated_delivery: result.estimated_delivery,
+        credits_remaining: creditsRemaining - 1,
       });
     } catch (handwriteError: any) {
       console.error('Handwrite.io API error (full details):', {

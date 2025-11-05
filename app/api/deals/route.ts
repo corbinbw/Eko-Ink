@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 
+// Configure route for file uploads
+export const runtime = 'nodejs';
+export const maxDuration = 60; // Allow up to 60 seconds for processing large files
+
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();

@@ -32,6 +32,16 @@ export default function NewNotePage() {
     setError(null);
 
     try {
+      // Check file size before uploading
+      if (audioFile) {
+        const fileSizeMB = audioFile.size / (1024 * 1024);
+        if (fileSizeMB > 50) {
+          throw new Error(
+            `File size is ${fileSizeMB.toFixed(1)}MB, which exceeds the 50MB limit. Please use an MP3 file instead of WAV, or compress your audio file.`
+          );
+        }
+      }
+
       const formDataToSend = new FormData();
 
       // Add deal details
@@ -78,31 +88,48 @@ export default function NewNotePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
-      <header className="bg-white shadow-sm">
-        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
+      <header className="border-b border-gray-200 dark:border-gray-700" style={{ backgroundColor: '#f8f7f2' }}>
+        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-gray-900">Create Thank You Note</h1>
-            <Link
-              href="/dashboard"
-              className="text-sm text-gray-600 hover:text-gray-900"
-            >
-              ← Back to Dashboard
+            <Link href="/dashboard" className="flex items-center gap-3">
+              <img src="/ekoink-logo.png" alt="EkoInk" className="h-12 w-auto" />
+              <h1 className="text-3xl font-serif font-bold text-royal-ink dark:text-gray-100 italic">EkoInk</h1>
             </Link>
+            <div className="flex items-center gap-8">
+              <Link href="/dashboard" className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-royal-ink dark:hover:text-antique-gold transition-colors">
+                Dashboard
+              </Link>
+              <Link href="/dashboard/notes" className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-royal-ink dark:hover:text-antique-gold transition-colors">
+                Notes
+              </Link>
+              <Link href="/dashboard/credits" className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-royal-ink dark:hover:text-antique-gold transition-colors">
+                Credits
+              </Link>
+              <Link href="/dashboard/settings" className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-royal-ink dark:hover:text-antique-gold transition-colors">
+                Settings
+              </Link>
+            </div>
           </div>
         </div>
       </header>
 
       {/* Form */}
-      <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
-        <form onSubmit={handleSubmit} className="space-y-8">
+      <main className="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8">
+        <div className="mb-8">
+          <h2 className="text-3xl font-serif font-bold text-royal-ink dark:text-gray-100">Create Thank You Note</h2>
+          <p className="mt-2 text-gray-600 dark:text-gray-400">
+            Fill in the details below to create a personalized handwritten note
+          </p>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-6">
           {/* Customer Information */}
-          <div className="rounded-lg bg-white p-6 shadow">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Customer Information</h2>
+          <div className="card-elegant">
+            <h3 className="text-lg font-semibold text-royal-ink dark:text-gray-100 mb-4">Customer Information</h3>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   First Name *
                 </label>
                 <input
@@ -111,12 +138,12 @@ export default function NewNotePage() {
                   required
                   value={formData.customerFirstName}
                   onChange={(e) => setFormData({ ...formData, customerFirstName: e.target.value })}
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+                  className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 shadow-sm focus:border-royal-ink dark:focus:border-antique-gold focus:outline-none focus:ring-royal-ink dark:focus:ring-antique-gold"
                 />
               </div>
 
               <div>
-                <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Last Name *
                 </label>
                 <input
@@ -125,13 +152,13 @@ export default function NewNotePage() {
                   required
                   value={formData.customerLastName}
                   onChange={(e) => setFormData({ ...formData, customerLastName: e.target.value })}
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+                  className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 shadow-sm focus:border-royal-ink dark:focus:border-antique-gold focus:outline-none focus:ring-royal-ink dark:focus:ring-antique-gold"
                 />
               </div>
             </div>
 
             <div className="mt-4">
-              <label htmlFor="address1" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="address1" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Address Line 1 *
               </label>
               <input
@@ -140,13 +167,13 @@ export default function NewNotePage() {
                 required
                 value={formData.addressLine1}
                 onChange={(e) => setFormData({ ...formData, addressLine1: e.target.value })}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+                className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 shadow-sm focus:border-royal-ink dark:focus:border-antique-gold focus:outline-none focus:ring-royal-ink dark:focus:ring-antique-gold"
                 placeholder="123 Main St"
               />
             </div>
 
             <div className="mt-4">
-              <label htmlFor="address2" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="address2" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Address Line 2
               </label>
               <input
@@ -154,14 +181,14 @@ export default function NewNotePage() {
                 type="text"
                 value={formData.addressLine2}
                 onChange={(e) => setFormData({ ...formData, addressLine2: e.target.value })}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+                className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 shadow-sm focus:border-royal-ink dark:focus:border-antique-gold focus:outline-none focus:ring-royal-ink dark:focus:ring-antique-gold"
                 placeholder="Apt 4B"
               />
             </div>
 
             <div className="grid gap-4 sm:grid-cols-3 mt-4">
               <div>
-                <label htmlFor="city" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="city" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   City *
                 </label>
                 <input
@@ -170,12 +197,12 @@ export default function NewNotePage() {
                   required
                   value={formData.city}
                   onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+                  className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 shadow-sm focus:border-royal-ink dark:focus:border-antique-gold focus:outline-none focus:ring-royal-ink dark:focus:ring-antique-gold"
                 />
               </div>
 
               <div>
-                <label htmlFor="state" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="state" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   State *
                 </label>
                 <input
@@ -184,13 +211,13 @@ export default function NewNotePage() {
                   required
                   value={formData.state}
                   onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+                  className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 shadow-sm focus:border-royal-ink dark:focus:border-antique-gold focus:outline-none focus:ring-royal-ink dark:focus:ring-antique-gold"
                   placeholder="UT"
                 />
               </div>
 
               <div>
-                <label htmlFor="postalCode" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="postalCode" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   ZIP Code *
                 </label>
                 <input
@@ -199,7 +226,7 @@ export default function NewNotePage() {
                   required
                   value={formData.postalCode}
                   onChange={(e) => setFormData({ ...formData, postalCode: e.target.value })}
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+                  className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 shadow-sm focus:border-royal-ink dark:focus:border-antique-gold focus:outline-none focus:ring-royal-ink dark:focus:ring-antique-gold"
                   placeholder="84604"
                 />
               </div>
@@ -207,12 +234,12 @@ export default function NewNotePage() {
           </div>
 
           {/* Deal Information */}
-          <div className="rounded-lg bg-white p-6 shadow">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Deal Information</h2>
+          <div className="card-elegant">
+            <h3 className="text-lg font-semibold text-royal-ink dark:text-gray-100 mb-4">Deal Information</h3>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label htmlFor="product" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="product" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Product/Service
                 </label>
                 <input
@@ -220,13 +247,13 @@ export default function NewNotePage() {
                   type="text"
                   value={formData.productName}
                   onChange={(e) => setFormData({ ...formData, productName: e.target.value })}
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+                  className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 shadow-sm focus:border-royal-ink dark:focus:border-antique-gold focus:outline-none focus:ring-royal-ink dark:focus:ring-antique-gold"
                   placeholder="36-month lease"
                 />
               </div>
 
               <div>
-                <label htmlFor="dealValue" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="dealValue" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Deal Value ($)
                 </label>
                 <input
@@ -235,14 +262,14 @@ export default function NewNotePage() {
                   step="0.01"
                   value={formData.dealValue}
                   onChange={(e) => setFormData({ ...formData, dealValue: e.target.value })}
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+                  className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 shadow-sm focus:border-royal-ink dark:focus:border-antique-gold focus:outline-none focus:ring-royal-ink dark:focus:ring-antique-gold"
                   placeholder="21874.55"
                 />
               </div>
             </div>
 
             <div className="mt-4">
-              <label htmlFor="personalDetail" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="personalDetail" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Personal Detail
               </label>
               <textarea
@@ -250,22 +277,22 @@ export default function NewNotePage() {
                 rows={3}
                 value={formData.personalDetail}
                 onChange={(e) => setFormData({ ...formData, personalDetail: e.target.value })}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+                className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 shadow-sm focus:border-royal-ink dark:focus:border-antique-gold focus:outline-none focus:ring-royal-ink dark:focus:ring-antique-gold"
                 placeholder="They mentioned moving to St. George next month..."
               />
-              <p className="mt-1 text-sm text-gray-500">
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                 Any personal details from the call to include in the note
               </p>
             </div>
           </div>
 
           {/* Call Recording */}
-          <div className="rounded-lg bg-white p-6 shadow">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Call Recording</h2>
+          <div className="card-elegant">
+            <h3 className="text-lg font-semibold text-royal-ink dark:text-gray-100 mb-4">Call Recording</h3>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Upload Audio File *
                 </label>
                 <input
@@ -275,24 +302,24 @@ export default function NewNotePage() {
                     setAudioFile(e.target.files?.[0] || null);
                     setAudioUrl(''); // Clear URL if file is selected
                   }}
-                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                  className="block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-antique-gold/10 dark:file:bg-antique-gold/20 file:text-antique-gold-700 dark:file:text-antique-gold hover:file:bg-antique-gold/20 dark:hover:file:bg-antique-gold/30"
                 />
-                <p className="mt-1 text-sm text-gray-500">
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                   MP3 or WAV file, max 50MB
                 </p>
               </div>
 
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-300" />
+                  <div className="w-full border-t border-gray-300 dark:border-gray-700" />
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="bg-white px-2 text-gray-500">OR</span>
+                  <span className="bg-white dark:bg-gray-800 px-2 text-gray-500 dark:text-gray-400">OR</span>
                 </div>
               </div>
 
               <div>
-                <label htmlFor="audioUrl" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="audioUrl" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Audio File URL
                 </label>
                 <input
@@ -303,7 +330,7 @@ export default function NewNotePage() {
                     setAudioUrl(e.target.value);
                     setAudioFile(null); // Clear file if URL is entered
                   }}
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+                  className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 shadow-sm focus:border-royal-ink dark:focus:border-antique-gold focus:outline-none focus:ring-royal-ink dark:focus:ring-antique-gold"
                   placeholder="https://example.com/call-recording.mp3"
                 />
               </div>
@@ -312,8 +339,8 @@ export default function NewNotePage() {
 
           {/* Error Message */}
           {error && (
-            <div className="rounded-md bg-red-50 p-4">
-              <p className="text-sm text-red-800">{error}</p>
+            <div className="rounded-md bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4">
+              <p className="text-sm text-red-800 dark:text-red-400">{error}</p>
             </div>
           )}
 
@@ -321,14 +348,14 @@ export default function NewNotePage() {
           <div className="flex justify-end gap-4">
             <Link
               href="/dashboard"
-              className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+              className="rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
             >
               Cancel
             </Link>
             <button
               type="submit"
               disabled={loading}
-              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn-gold disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Creating...' : 'Create Note'}
             </button>

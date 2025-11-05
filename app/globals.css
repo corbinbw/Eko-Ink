@@ -4,25 +4,75 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* EkoInk Brand Color System */
+    /* Royal Ink Blue - Primary */
+    --background: 40 45% 97%; /* Parchment background */
+    --foreground: 221 43% 19%; /* Royal Ink for text */
+
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 221 43% 19%;
+
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --popover-foreground: 221 43% 19%;
+
+    /* Primary - Royal Ink Blue */
+    --primary: 221 43% 19%;
+    --primary-foreground: 40 45% 97%;
+
+    /* Secondary - Antique Gold */
+    --secondary: 40 47% 59%;
+    --secondary-foreground: 221 43% 19%;
+
+    /* Muted - Soft parchment tones */
+    --muted: 40 35% 92%;
+    --muted-foreground: 221 20% 40%;
+
+    /* Accent - Imperial Purple */
+    --accent: 267 37% 38%;
+    --accent-foreground: 0 0% 100%;
+
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 40 20% 88%;
+    --input: 40 20% 88%;
+    --ring: 221 43% 19%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    /* Dark mode colors */
+    --background: 221 43% 11%; /* Dark royal ink */
+    --foreground: 40 45% 97%; /* Light parchment for text */
+
+    --card: 221 43% 15%;
+    --card-foreground: 40 45% 97%;
+
+    --popover: 221 43% 15%;
+    --popover-foreground: 40 45% 97%;
+
+    /* Primary - Lighter in dark mode */
+    --primary: 40 45% 97%;
+    --primary-foreground: 221 43% 19%;
+
+    /* Secondary - Antique Gold stays similar */
+    --secondary: 40 47% 59%;
+    --secondary-foreground: 221 43% 11%;
+
+    /* Muted - Dark grays */
+    --muted: 221 20% 20%;
+    --muted-foreground: 40 20% 70%;
+
+    /* Accent - Imperial Purple lighter */
+    --accent: 267 37% 50%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 221 20% 25%;
+    --input: 221 20% 25%;
+    --ring: 40 47% 59%; /* Gold ring in dark mode */
     --radius: 0.5rem;
   }
 }
@@ -31,7 +81,88 @@
   * {
     @apply border-border;
   }
+
   body {
-    @apply bg-background text-foreground;
+    @apply bg-gray-50 text-royal-ink dark:bg-gray-900 dark:text-gray-100;
+    font-feature-settings: "rlig" 1, "calt" 1, "liga" 1;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif dark:text-gray-100;
+  }
+}
+
+@layer components {
+  /* EkoInk Button Styles */
+  .btn-primary {
+    @apply inline-flex items-center justify-center rounded-md bg-royal-ink px-6 py-3 text-sm font-semibold text-parchment shadow-md transition-all hover:bg-royal-ink-600 hover:shadow-lg hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-royal-ink focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
+    background: linear-gradient(135deg, #1C2541 0%, #2a3555 100%);
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center rounded-md border-2 border-royal-ink bg-transparent px-6 py-2.5 text-sm font-semibold text-royal-ink transition-all hover:bg-royal-ink hover:text-parchment hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-royal-ink focus:ring-offset-2;
+  }
+
+  .btn-gold {
+    @apply inline-flex items-center justify-center rounded-md px-6 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-antique-gold focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
+    background: linear-gradient(135deg, #C6A664 0%, #B8955A 100%);
+  }
+
+  .card {
+    @apply rounded-lg bg-white p-6 shadow-sm border border-gray-200 transition-all hover:shadow-md hover:-translate-y-0.5 dark:bg-gray-800 dark:border-gray-700;
+  }
+
+  .card-elegant {
+    @apply rounded-lg bg-white p-7 shadow-sm border border-gray-200 transition-all hover:shadow-md hover:border-gray-300 dark:bg-gray-800 dark:border-gray-700 dark:hover:border-gray-600;
+  }
+
+  .input-field {
+    @apply block w-full rounded-md border-gray-300 bg-white px-3 py-2 shadow-sm transition-all focus:border-royal-ink focus:ring-royal-ink sm:text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100 dark:focus:border-antique-gold dark:focus:ring-antique-gold;
+  }
+
+  /* Brand Typography */
+  .heading-royal {
+    @apply font-serif text-royal-ink tracking-tight dark:text-gray-100;
+  }
+
+  .logo-text {
+    @apply font-serif italic tracking-wider;
+    letter-spacing: 0.05em;
+    text-shadow: 0 1px 2px rgba(28, 37, 65, 0.1);
+  }
+
+  .text-accent-gold {
+    background: linear-gradient(135deg, #C6A664 0%, #d4b675 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Decorative Elements */
+  .ink-flourish {
+    position: relative;
+  }
+
+  .ink-flourish::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #C6A664, transparent);
+    opacity: 0.5;
+  }
+
+  /* Animations */
+  @keyframes shimmer {
+    0% { background-position: -100% 0; }
+    100% { background-position: 100% 0; }
+  }
+
+  .shimmer {
+    background: linear-gradient(90deg, rgba(198, 166, 100, 0) 0%, rgba(198, 166, 100, 0.3) 50%, rgba(198, 166, 100, 0) 100%);
+    background-size: 200% 100%;
+    animation: shimmer 3s ease-in-out infinite;
   }
 }

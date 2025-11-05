@@ -30,34 +30,88 @@ export default async function DashboardPage() {
     .eq('email', authUser.email)
     .single();
 
-  // If user doesn't exist in users table, create them with a personal account
+  // If user doesn't exist in users table, create them
   if (!user || userError) {
-    console.log('User not found, creating new user and account...');
+    console.log('User not found, creating new user...');
 
-    // First create an account for this user
-    const { data: newAccount, error: accountError } = await supabaseAdmin
-      .from('accounts')
-      .insert({
-        company_name: authUser.email?.split('@')[1] || 'Personal Account',
-        credits_remaining: 0,
-      })
-      .select('id')
-      .single();
+    // Get metadata from sign-up
+    const role = (authUser.user_metadata?.role as string) || 'rep';
+    const companyName = authUser.user_metadata?.company_name as string;
+    const inviteCode = authUser.user_metadata?.invite_code as string;
 
-    if (accountError || !newAccount) {
-      console.error('Error creating account:', accountError);
-      redirect('/login');
+    let accountId: string;
+    let managerId: string | null = null;
+    let teamId: string | null = null;
+
+    if (inviteCode) {
+      // User signed up with invite code - join existing account
+      const { data: invitation } = await supabaseAdmin
+        .from('invitations')
+        .select('account_id, inviter_id, team_id')
+        .eq('code', inviteCode)
+        .eq('status', 'active')
+        .single();
+
+      if (!invitation) {
+        console.error('Invalid or expired invite code:', inviteCode);
+        redirect('/login');
+      }
+
+      accountId = invitation.account_id;
+      managerId = invitation.inviter_id;
+      teamId = invitation.team_id;
+
+      // Mark invitation as used
+      await supabaseAdmin
+        .from('invitations')
+        .update({
+          status: 'used',
+          used_by: authUser.id,
+          used_at: new Date().toISOString(),
+        })
+        .eq('code', inviteCode);
+    } else {
+      // User is creating their own account (manager or executive)
+      const { data: newAccount, error: accountError } = await supabaseAdmin
+        .from('accounts')
+        .insert({
+          company_name: companyName || authUser.email?.split('@')[1] || 'Personal Account',
+          credits_remaining: 0,
+        })
+        .select('id')
+        .single();
+
+      if (accountError || !newAccount) {
+        console.error('Error creating account:', accountError);
+        redirect('/login');
+      }
+
+      accountId = newAccount.id;
+
+      // Generate invite code for managers and executives
+      if (role === 'manager' || role === 'executive') {
+        const inviteCodeGenerated = Array.from({ length: 8 }, () =>
+          'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'.charAt(Math.floor(Math.random() * 36))
+        ).join('');
+
+        await supabaseAdmin
+          .from('users')
+          .update({ invite_code: inviteCodeGenerated })
+          .eq('id', authUser.id);
+      }
     }
 
-    // Then create the user linked to this account
+    // Create the user
     const { data: newUser, error: createError } = await supabaseAdmin
       .from('users')
       .insert({
         id: authUser.id,
-        account_id: newAccount.id,
+        account_id: accountId,
         email: authUser.email!,
-        name: authUser.email?.split('@')[0] || 'User',
-        role: 'owner',
+        name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'User',
+        role: role,
+        manager_id: managerId,
+        team_id: teamId,
       })
       .select(`
         id,
@@ -91,7 +145,7 @@ export default async function DashboardPage() {
     .from('notes')
     .select('*', { count: 'exact', head: true })
     .eq('user_id', user.id)
-    .in('status', ['draft', 'approved']);
+    .in('status', ['draft', 'approved', 'pending']);
 
   const { count: delivered } = await supabaseAdmin
     .from('notes')
@@ -99,17 +153,52 @@ export default async function DashboardPage() {
     .eq('user_id', user.id)
     .eq('status', 'delivered');
 
+  // Get all notes count
+  const { count: totalNotes } = await supabaseAdmin
+    .from('notes')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', user.id);
+
+  // Get recent notes for display
+  const { data: recentNotes } = await supabaseAdmin
+    .from('notes')
+    .select(`
+      *,
+      deals:deal_id (
+        customer_first_name,
+        customer_last_name
+      )
+    `)
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false })
+    .limit(5);
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
-      <header className="bg-white shadow-sm">
-        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
+      <header className="border-b border-gray-200 dark:border-gray-700" style={{ backgroundColor: '#f8f7f2' }}>
+        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-gray-900">EkoInk Dashboard</h1>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
+              <img src="/ekoink-logo.png" alt="EkoInk" className="h-12 w-auto" />
+              <h1 className="text-3xl font-serif font-bold text-royal-ink dark:text-gray-100 italic">EkoInk</h1>
+            </div>
+            <div className="flex items-center gap-8">
+              <Link
+                href="/dashboard/notes"
+                className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-royal-ink dark:hover:text-antique-gold transition-colors"
+              >
+                Notes
+              </Link>
+              <Link
+                href="/dashboard/credits"
+                className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-royal-ink dark:hover:text-antique-gold transition-colors"
+              >
+                Credits
+              </Link>
               <Link
                 href="/dashboard/settings"
-                className="text-sm font-medium text-gray-700 hover:text-gray-900"
+                className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-royal-ink dark:hover:text-antique-gold transition-colors"
               >
                 Settings
               </Link>
@@ -120,83 +209,104 @@ export default async function DashboardPage() {
       </header>
 
       {/* Main Content */}
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold text-gray-900">
-            Welcome, {user.name}!
-          </h2>
-          <p className="mt-2 text-gray-600">
-            Your dashboard is ready. Start sending handwritten thank-you notes.
-          </p>
+      <main className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+        <div className="mb-16 flex items-center justify-between">
+          <div>
+            <h2 className="text-3xl font-serif font-bold text-royal-ink dark:text-gray-100">
+              Welcome back, {user.name}
+            </h2>
+            <p className="mt-2 text-gray-600 dark:text-gray-400">
+              Thoughtful notes, at scale
+            </p>
+          </div>
+          <Link href="/dashboard/new-note" className="btn-gold">
+            Create Note
+          </Link>
         </div>
 
         {/* Stats Grid */}
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-lg bg-white p-6 shadow">
-            <h3 className="text-sm font-medium text-gray-600">Notes Sent</h3>
-            <p className="mt-2 text-3xl font-semibold text-gray-900">{notesSent || 0}</p>
-          </div>
+        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+          <Link href="/dashboard/notes" className="card-elegant cursor-pointer hover:scale-[1.02] transition-transform">
+            <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-3">Notes Sent</p>
+            <p className="text-4xl font-serif font-semibold text-royal-ink dark:text-gray-100">{notesSent || 0}</p>
+          </Link>
 
-          <div className="rounded-lg bg-white p-6 shadow">
-            <h3 className="text-sm font-medium text-gray-600">Pending Approval</h3>
-            <p className="mt-2 text-3xl font-semibold text-gray-900">{pendingApproval || 0}</p>
-          </div>
+          <Link href="/dashboard/notes" className="card-elegant cursor-pointer hover:scale-[1.02] transition-transform">
+            <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-3">Pending</p>
+            <p className="text-4xl font-serif font-semibold text-royal-ink dark:text-gray-100">{pendingApproval || 0}</p>
+          </Link>
 
-          <div className="rounded-lg bg-white p-6 shadow">
-            <h3 className="text-sm font-medium text-gray-600">Delivered</h3>
-            <p className="mt-2 text-3xl font-semibold text-gray-900">{delivered || 0}</p>
-          </div>
+          <Link href="/dashboard/notes" className="card-elegant cursor-pointer hover:scale-[1.02] transition-transform">
+            <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-3">Delivered</p>
+            <p className="text-4xl font-serif font-semibold text-royal-ink dark:text-gray-100">{delivered || 0}</p>
+          </Link>
 
-          <div className="rounded-lg bg-white p-6 shadow">
-            <h3 className="text-sm font-medium text-gray-600">Credits Remaining</h3>
-            <p className="mt-2 text-3xl font-semibold text-gray-900">{credits}</p>
-          </div>
-        </div>
-
-        {/* Quick Actions */}
-        <div className="mt-8">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <Link href="/dashboard/new-note" className="rounded-lg bg-blue-600 px-4 py-3 text-left text-white shadow hover:bg-blue-700 transition block">
-              <h4 className="font-semibold">Send a Note</h4>
-              <p className="mt-1 text-sm text-blue-100">Create a new thank-you note</p>
-            </Link>
-
-            <Link href="/dashboard/notes" className="rounded-lg bg-white px-4 py-3 text-left shadow hover:bg-gray-50 transition block">
-              <h4 className="font-semibold text-gray-900">View Notes</h4>
-              <p className="mt-1 text-sm text-gray-600">See all your notes</p>
-            </Link>
-
-            <Link href="/dashboard/credits" className="rounded-lg bg-white px-4 py-3 text-left shadow hover:bg-gray-50 transition block">
-              <h4 className="font-semibold text-gray-900">Add Credits</h4>
-              <p className="mt-1 text-sm text-gray-600">Purchase more credits</p>
-            </Link>
-          </div>
-        </div>
-
-        {/* Empty State */}
-        <div className="mt-8 rounded-lg bg-white p-12 text-center shadow">
-          <svg
-            className="mx-auto h-12 w-12 text-gray-400"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-            />
-          </svg>
-          <h3 className="mt-4 text-lg font-semibold text-gray-900">No notes yet</h3>
-          <p className="mt-2 text-gray-600">
-            Get started by sending your first handwritten thank-you note
-          </p>
-          <Link href="/dashboard/new-note" className="mt-6 inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-blue-700">
-            Send First Note
+          <Link href="/dashboard/credits" className="card-elegant cursor-pointer hover:scale-[1.02] transition-transform">
+            <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-3">Credits</p>
+            <p className="text-4xl font-serif font-semibold text-royal-ink dark:text-gray-100">{credits}</p>
           </Link>
         </div>
+
+        {/* Recent Notes */}
+        {recentNotes && recentNotes.length > 0 ? (
+          <div className="mt-12">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-2xl font-serif font-bold text-royal-ink dark:text-gray-100">Recent Notes</h3>
+              <Link href="/dashboard/notes" className="text-sm font-medium text-antique-gold hover:text-antique-gold-600 transition-colors flex items-center gap-1">
+                View all
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </Link>
+            </div>
+            <div className="bg-white dark:bg-gray-800 rounded-lg border-2 border-antique-gold/20 dark:border-antique-gold/30 divide-y divide-gray-100 dark:divide-gray-700 shadow-sm">
+              {recentNotes.map((note: any) => (
+                <Link
+                  key={note.id}
+                  href={`/dashboard/notes/${note.id}`}
+                  className="block px-6 py-5 hover:bg-parchment/50 dark:hover:bg-gray-700/50 transition-colors"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-semibold text-royal-ink dark:text-gray-100 text-base">
+                        {note.deals?.customer_first_name} {note.deals?.customer_last_name}
+                      </p>
+                      <p className="mt-1 text-sm text-royal-ink/60 dark:text-gray-400">
+                        {new Date(note.created_at).toLocaleDateString('en-US', {
+                          month: 'long',
+                          day: 'numeric',
+                          year: 'numeric'
+                        })}
+                      </p>
+                    </div>
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide ${
+                      note.status === 'draft' ? 'bg-antique-gold/20 text-antique-gold-700 border border-antique-gold/30' :
+                      note.status === 'approved' ? 'bg-royal-ink/10 text-royal-ink dark:bg-royal-ink/20 dark:text-gray-200 border border-royal-ink/20 dark:border-royal-ink/40' :
+                      note.status === 'sent' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800' :
+                      note.status === 'delivered' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800' :
+                      'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600'
+                    }`}>
+                      {note.status}
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="mt-16 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-20 text-center">
+            <svg className="mx-auto h-16 w-16 text-gray-400 dark:text-gray-500 mb-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <h3 className="text-xl font-serif font-semibold text-gray-900 dark:text-gray-100 mb-2">No notes yet</h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-8 max-w-md mx-auto">
+              Get started by creating your first handwritten note.
+            </p>
+            <Link href="/dashboard/new-note" className="btn-gold">
+              Create Your First Note
+            </Link>
+          </div>
+        )}
       </main>
     </div>
   );

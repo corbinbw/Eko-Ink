@@ -102,99 +102,114 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12">
-      <div className="w-full max-w-md space-y-8">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold">EkoInk</h1>
-          <h2 className="mt-6 text-2xl font-semibold text-gray-900">Sign in to your account</h2>
-          {useMagicLink ? (
-            <p className="mt-2 text-sm text-gray-600">
-              We'll send you a magic link to sign in without a password
-            </p>
-          ) : (
-            <p className="mt-2 text-sm text-gray-600">
-              Enter your email and password to sign in
-            </p>
-          )}
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900 px-4 py-12">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-serif font-bold text-royal-ink dark:text-gray-100 italic">EkoInk</h1>
+          <h2 className="mt-4 text-lg text-gray-600 dark:text-gray-400">Sign in to your account</h2>
         </div>
 
         {!supabase && !configLoading && (
-          <div className="rounded-md bg-yellow-50 p-4 text-sm text-yellow-800">
+          <div className="rounded-md bg-yellow-50 dark:bg-yellow-900/20 p-4 text-sm text-yellow-800 dark:text-yellow-300 mb-6 border border-yellow-200 dark:border-yellow-800">
             Supabase credentials are not configured for this deployment. Set the required environment
             variables before using the login form.
           </div>
         )}
 
-        <form onSubmit={useMagicLink ? handleMagicLinkLogin : handlePasswordLogin} className="mt-8 space-y-6">
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-              Email address
-            </label>
-            <input
-              id="email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
-              placeholder="you@example.com"
-              disabled={isDisabled}
-            />
-          </div>
-
-          {!useMagicLink && (
+        <form onSubmit={useMagicLink ? handleMagicLinkLogin : handlePasswordLogin} className="space-y-5">
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Password
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Email address
               </label>
               <input
-                id="password"
-                type="password"
+                id="email"
+                type="email"
                 required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
-                placeholder="Enter your password"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="input-field"
+                placeholder="you@example.com"
                 disabled={isDisabled}
               />
             </div>
-          )}
 
-          {message && (
-            <div
-              className={`rounded-md p-4 ${
-                message.type === 'success' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'
-              }`}
-            >
-              <p className="text-sm">{message.text}</p>
-            </div>
-          )}
+            {!useMagicLink && (
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                  Password
+                </label>
+                <input
+                  id="password"
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="input-field"
+                  placeholder="Enter your password"
+                  disabled={isDisabled}
+                />
+              </div>
+            )}
 
-          <button
-            type="submit"
-            disabled={isDisabled}
-            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? (useMagicLink ? 'Sending...' : 'Signing in...') : (useMagicLink ? 'Send magic link' : 'Sign in')}
-          </button>
+            {message && (
+              <div
+                className={`rounded-md p-3 ${
+                  message.type === 'success'
+                    ? 'bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-800'
+                    : 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-800'
+                }`}
+              >
+                <p className="text-sm">{message.text}</p>
+              </div>
+            )}
 
-          <div className="text-center">
             <button
-              type="button"
-              onClick={() => {
-                setUseMagicLink(!useMagicLink);
-                setMessage(null);
-                setPassword('');
-              }}
-              className="text-sm text-blue-600 hover:text-blue-500 font-medium"
+              type="submit"
+              disabled={isDisabled}
+              className="w-full btn-gold disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {useMagicLink ? 'Use password instead' : 'Use magic link instead'}
+              {loading ? (
+                <span className="flex items-center justify-center">
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  {useMagicLink ? 'Sending...' : 'Signing in...'}
+                </span>
+              ) : (
+                useMagicLink ? 'Send magic link' : 'Sign in'
+              )}
             </button>
-          </div>
 
-          <div className="text-center text-sm">
-            <span className="text-gray-600">Don't have an account? </span>
-            <Link href="/signup" className="font-medium text-blue-600 hover:text-blue-500">
+            <div className="text-center space-y-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setUseMagicLink(!useMagicLink);
+                  setMessage(null);
+                  setPassword('');
+                }}
+                className="text-sm text-antique-gold hover:text-antique-gold-600 font-medium transition-colors block mx-auto"
+              >
+                {useMagicLink ? 'Use password instead' : 'Use magic link instead'}
+              </button>
+              {!useMagicLink && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUseMagicLink(true);
+                    setMessage({ type: 'success', text: 'Enter your email to receive a password reset link' });
+                  }}
+                  className="text-sm text-gray-600 dark:text-gray-400 hover:text-royal-ink dark:hover:text-antique-gold transition-colors block mx-auto"
+                >
+                  Forgot password?
+                </button>
+              )}
+            </div>
+
+          <div className="text-center text-sm border-t border-gray-200 dark:border-gray-700 pt-4">
+            <span className="text-gray-600 dark:text-gray-400">Don't have an account? </span>
+            <Link href="/signup" className="font-medium text-royal-ink dark:text-antique-gold hover:text-royal-ink-600 dark:hover:text-antique-gold-600 transition-colors">
               Sign up
             </Link>
           </div>
