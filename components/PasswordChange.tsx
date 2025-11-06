@@ -32,6 +32,10 @@ export default function PasswordChange() {
     try {
       const supabase = await createClientSupabase();
 
+      if (!supabase) {
+        throw new Error('Failed to initialize Supabase client');
+      }
+
       const { error } = await supabase.auth.updateUser({
         password: newPassword
       });
