@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
+import CopyButton from './CopyButton';
 
 export default async function TeamDashboardPage() {
   const supabase = await createClient();
@@ -209,12 +210,7 @@ export default async function TeamDashboardPage() {
                 value={inviteUrl}
                 className="flex-1 rounded-md border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 px-4 py-2 text-sm text-gray-900 dark:text-gray-100 font-mono"
               />
-              <button
-                onClick={() => navigator.clipboard.writeText(inviteUrl)}
-                className="px-4 py-2 bg-royal-ink dark:bg-antique-gold text-white dark:text-gray-900 text-sm font-semibold rounded-md hover:bg-royal-ink-600 dark:hover:bg-antique-gold-600 transition-colors"
-              >
-                Copy Link
-              </button>
+              <CopyButton textToCopy={inviteUrl} />
             </div>
             <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
               Your invite code: <span className="font-mono font-semibold">{user.invite_code}</span>
