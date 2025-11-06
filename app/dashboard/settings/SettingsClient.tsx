@@ -15,6 +15,7 @@ interface User {
   role: string;
   account_id: string;
   signature_image_url?: string | null;
+  invite_code?: string | null;
   accounts: {
     credits_remaining: number;
     company_name: string;
@@ -271,6 +272,43 @@ export default function SettingsClient({ user: initialUser, notesSent }: Setting
 
           {/* Additional Settings */}
           <div className="lg:col-span-2 space-y-6">
+            {/* Team Management - Only for managers */}
+            {(user.role === 'manager' || user.role === 'executive') && user.invite_code && (
+              <div className="card-elegant">
+                <h3 className="text-lg font-semibold text-royal-ink dark:text-gray-100 mb-4">Team Management</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                  Share this link with your sales reps to invite them to join your team:
+                </p>
+                <div className="flex items-center gap-3 mb-3">
+                  <input
+                    type="text"
+                    readOnly
+                    value={`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/signup?code=${user.invite_code}`}
+                    className="flex-1 rounded-md border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 px-4 py-2 text-sm text-gray-900 dark:text-gray-100 font-mono"
+                  />
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/signup?code=${user.invite_code}`);
+                      setSuccess('Invite link copied to clipboard!');
+                      setTimeout(() => setSuccess(null), 3000);
+                    }}
+                    className="px-4 py-2 bg-royal-ink dark:bg-antique-gold text-white dark:text-gray-900 text-sm font-semibold rounded-md hover:bg-royal-ink-600 dark:hover:bg-antique-gold-600 transition-colors whitespace-nowrap"
+                  >
+                    Copy Link
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+                  Your invite code: <span className="font-mono font-semibold">{user.invite_code}</span>
+                </p>
+                <Link
+                  href="/dashboard/team"
+                  className="inline-flex items-center text-sm font-medium text-antique-gold hover:text-antique-gold-600 transition-colors"
+                >
+                  View Team Dashboard →
+                </Link>
+              </div>
+            )}
+
             <ThemeToggle />
 
             <PasswordChange />

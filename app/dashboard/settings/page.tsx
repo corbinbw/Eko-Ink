@@ -15,7 +15,7 @@ export default async function SettingsPage() {
     redirect('/login');
   }
 
-  // Get user data with account credits
+  // Get user data with account credits and invite code
   let { data: user, error: userError } = await supabaseAdmin
     .from('users')
     .select(`
@@ -25,6 +25,7 @@ export default async function SettingsPage() {
       role,
       account_id,
       signature_image_url,
+      invite_code,
       accounts:account_id (
         credits_remaining,
         company_name
@@ -69,6 +70,7 @@ export default async function SettingsPage() {
         role,
         account_id,
         signature_image_url,
+        invite_code,
         accounts:account_id (
           credits_remaining,
           company_name
