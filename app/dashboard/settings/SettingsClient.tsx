@@ -42,6 +42,14 @@ export default function SettingsClient({ user: initialUser, notesSent }: Setting
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  // Get base URL for invite links (works in browser)
+  const getBaseUrl = () => {
+    if (typeof window !== 'undefined') {
+      return window.location.origin;
+    }
+    return process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  };
+
   // Handle accounts being either an array or single object
   const accountData = Array.isArray(user.accounts) ? user.accounts[0] : user.accounts;
   const credits = accountData?.credits_remaining || 0;
@@ -283,12 +291,12 @@ export default function SettingsClient({ user: initialUser, notesSent }: Setting
                   <input
                     type="text"
                     readOnly
-                    value={`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/signup?code=${user.invite_code}`}
+                    value={`${getBaseUrl()}/signup?code=${user.invite_code}`}
                     className="flex-1 rounded-md border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 px-4 py-2 text-sm text-gray-900 dark:text-gray-100 font-mono"
                   />
                   <button
                     onClick={() => {
-                      navigator.clipboard.writeText(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/signup?code=${user.invite_code}`);
+                      navigator.clipboard.writeText(`${getBaseUrl()}/signup?code=${user.invite_code}`);
                       setSuccess('Invite link copied to clipboard!');
                       setTimeout(() => setSuccess(null), 3000);
                     }}
