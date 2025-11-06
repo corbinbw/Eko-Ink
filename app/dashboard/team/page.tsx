@@ -30,23 +30,95 @@ export default async function TeamDashboardPage() {
     redirect('/dashboard');
   }
 
-  // Fetch team stats
-  const statsResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/team/stats`, {
-    headers: {
-      cookie: `sb-access-token=${authUser.access_token}`,
-    },
-    cache: 'no-store',
-  });
-  const statsData = await statsResponse.json();
+  // Fetch team stats directly using supabaseAdmin
+  const { data: teamMembers } = await supabaseAdmin
+    .from('users')
+    .select('id')
+    .eq('manager_id', user.id);
 
-  // Fetch team members
-  const membersResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/team/members`, {
-    headers: {
-      cookie: `sb-access-token=${authUser.access_token}`,
-    },
-    cache: 'no-store',
-  });
-  const membersData = await membersResponse.json();
+  const teamMemberIds = teamMembers?.map((m) => m.id) || [];
+
+  let statsData = {
+    totalMembers: 0,
+    totalNotes: 0,
+    notesSent: 0,
+    pendingApproval: 0,
+  };
+
+  if (teamMemberIds.length > 0) {
+    const { count: totalNotes } = await supabaseAdmin
+      .from('notes')
+      .select('*', { count: 'exact', head: true })
+      .in('user_id', teamMemberIds);
+
+    const { count: notesSent } = await supabaseAdmin
+      .from('notes')
+      .select('*', { count: 'exact', head: true })
+      .in('user_id', teamMemberIds)
+      .in('status', ['sent', 'delivered']);
+
+    const { count: pendingApproval } = await supabaseAdmin
+      .from('notes')
+      .select('*', { count: 'exact', head: true })
+      .in('user_id', teamMemberIds)
+      .in('status', ['draft', 'approved', 'pending']);
+
+    statsData = {
+      totalMembers: teamMemberIds.length,
+      totalNotes: totalNotes || 0,
+      notesSent: notesSent || 0,
+      pendingApproval: pendingApproval || 0,
+    };
+  }
+
+  // Fetch team members with stats
+  const { data: teamMembersData } = await supabaseAdmin
+    .from('users')
+    .select(`
+      id,
+      name,
+      email,
+      role,
+      notes_sent_count,
+      created_at
+    `)
+    .eq('manager_id', user.id)
+    .order('created_at', { ascending: false });
+
+  const membersWithStats = await Promise.all(
+    (teamMembersData || []).map(async (member) => {
+      const { count: totalNotes } = await supabaseAdmin
+        .from('notes')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', member.id);
+
+      const { count: sentNotes } = await supabaseAdmin
+        .from('notes')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', member.id)
+        .in('status', ['sent', 'delivered']);
+
+      const { count: pendingNotes } = await supabaseAdmin
+        .from('notes')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', member.id)
+        .in('status', ['pending', 'draft', 'approved']);
+
+      return {
+        ...member,
+        stats: {
+          totalNotes: totalNotes || 0,
+          sentNotes: sentNotes || 0,
+          pendingNotes: pendingNotes || 0,
+        },
+      };
+    })
+  );
+
+  const membersData = {
+    teamMembers: membersWithStats,
+    totalMembers: membersWithStats.length,
+  };
 
   const inviteUrl = user.invite_code
     ? `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/signup?code=${user.invite_code}`
