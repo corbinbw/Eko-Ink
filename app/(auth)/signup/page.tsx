@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { createClientSupabase } from '@/lib/supabase/client-config';
@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 
 type UserRole = 'rep' | 'manager' | 'executive';
 
-export default function SignupPage() {
+function SignupForm() {
   const searchParams = useSearchParams();
   const inviteCode = searchParams.get('code');
 
@@ -345,5 +345,20 @@ export default function SignupPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-royal-ink dark:border-antique-gold mx-auto"></div>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading...</p>
+        </div>
+      </div>
+    }>
+      <SignupForm />
+    </Suspense>
   );
 }
