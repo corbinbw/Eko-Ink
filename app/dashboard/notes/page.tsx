@@ -18,7 +18,7 @@ export default async function NotesPage() {
   // Get user's account
   const { data: user } = await supabaseAdmin
     .from('users')
-    .select('account_id, id')
+    .select('account_id, id, role')
     .eq('email', authUser.email)
     .single();
 
@@ -58,6 +58,11 @@ export default async function NotesPage() {
               <Link href="/dashboard/notes" className="text-sm font-medium text-royal-ink dark:text-antique-gold">
                 Notes
               </Link>
+              {(user.role === 'manager' || user.role === 'executive') && (
+                <Link href="/dashboard/team" className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-royal-ink dark:hover:text-antique-gold transition-colors">
+                  Team
+                </Link>
+              )}
               <Link href="/dashboard/credits" className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-royal-ink dark:hover:text-antique-gold transition-colors">
                 Credits
               </Link>

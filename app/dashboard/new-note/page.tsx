@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -8,6 +8,7 @@ export default function NewNotePage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     customerFirstName: '',
@@ -25,6 +26,22 @@ export default function NewNotePage() {
 
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [audioUrl, setAudioUrl] = useState('');
+
+  // Fetch user role for navigation
+  useEffect(() => {
+    async function fetchUserRole() {
+      try {
+        const response = await fetch('/api/user/me');
+        if (response.ok) {
+          const data = await response.json();
+          setUserRole(data.user.role);
+        }
+      } catch (err) {
+        console.error('Failed to fetch user role:', err);
+      }
+    }
+    fetchUserRole();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,6 +121,11 @@ export default function NewNotePage() {
               <Link href="/dashboard/notes" className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-royal-ink dark:hover:text-antique-gold transition-colors">
                 Notes
               </Link>
+              {(userRole === 'manager' || userRole === 'executive') && (
+                <Link href="/dashboard/team" className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-royal-ink dark:hover:text-antique-gold transition-colors">
+                  Team
+                </Link>
+              )}
               <Link href="/dashboard/credits" className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-royal-ink dark:hover:text-antique-gold transition-colors">
                 Credits
               </Link>

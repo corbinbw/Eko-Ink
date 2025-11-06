@@ -162,10 +162,11 @@ CREATE POLICY "Executives can view account users"
   );
 
 -- Super admins can see everyone
+-- Note: Uses COALESCE to handle NULL if column doesn't exist
 CREATE POLICY "Super admins can view all users"
   ON users FOR SELECT
   USING (
-    (SELECT is_super_admin FROM users WHERE email = auth.jwt()->>'email') = true
+    COALESCE((SELECT is_super_admin FROM users WHERE email = auth.jwt()->>'email'), false) = true
   );
 
 -- Users can update own profile
@@ -193,7 +194,7 @@ CREATE POLICY "Users can view account teams"
   ON teams FOR SELECT
   USING (
     account_id = public.user_account_id()
-    OR (SELECT is_super_admin FROM users WHERE email = auth.jwt()->>'email') = true
+    OR COALESCE((SELECT is_super_admin FROM users WHERE email = auth.jwt()->>'email'), false) = true
   );
 
 -- Managers and executives can create teams
@@ -221,7 +222,7 @@ CREATE POLICY "Users can view own invitations"
   ON invitations FOR SELECT
   USING (
     inviter_id = (SELECT id FROM users WHERE email = auth.jwt()->>'email')
-    OR (SELECT is_super_admin FROM users WHERE email = auth.jwt()->>'email') = true
+    OR COALESCE((SELECT is_super_admin FROM users WHERE email = auth.jwt()->>'email'), false) = true
   );
 
 -- Managers and executives can create invitations
@@ -281,7 +282,7 @@ CREATE POLICY "Executives can view account notes"
 CREATE POLICY "Super admins can view all notes"
   ON notes FOR SELECT
   USING (
-    (SELECT is_super_admin FROM users WHERE email = auth.jwt()->>'email') = true
+    COALESCE((SELECT is_super_admin FROM users WHERE email = auth.jwt()->>'email'), false) = true
   );
 
 -- Update policy

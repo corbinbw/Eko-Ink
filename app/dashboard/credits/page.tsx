@@ -21,25 +21,36 @@ export default function CreditsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentBalance, setCurrentBalance] = useState<number | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
-  // Fetch current credit balance
+  // Fetch current credit balance and user role
   useEffect(() => {
-    async function fetchBalance() {
+    async function fetchUserData() {
       try {
-        const response = await fetch('/api/user/credits');
-        if (response.ok) {
-          const data = await response.json();
+        const [balanceResponse, userResponse] = await Promise.all([
+          fetch('/api/user/credits'),
+          fetch('/api/user/me'),
+        ]);
+
+        if (balanceResponse.ok) {
+          const data = await balanceResponse.json();
           setCurrentBalance(data.credits);
         }
+
+        if (userResponse.ok) {
+          const data = await userResponse.json();
+          setUserRole(data.user.role);
+        }
       } catch (err) {
-        console.error('Failed to fetch credit balance:', err);
+        console.error('Failed to fetch user data:', err);
       }
     }
-    fetchBalance();
+    fetchUserData();
   }, []);
 
   const pricePerCredit = getPricePerCredit(credits);
   const totalPrice = calculateTotalPrice(credits);
+  const isTeamRep = userRole === 'rep' || userRole === 'team_rep';
 
   const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.target.value);
@@ -119,6 +130,11 @@ export default function CreditsPage() {
               <Link href="/dashboard/notes" className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-royal-ink dark:hover:text-antique-gold transition-colors">
                 Notes
               </Link>
+              {(userRole === 'manager' || userRole === 'executive') && (
+                <Link href="/dashboard/team" className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-royal-ink dark:hover:text-antique-gold transition-colors">
+                  Team
+                </Link>
+              )}
               <Link href="/dashboard/credits" className="text-sm font-medium text-royal-ink dark:text-antique-gold">
                 Credits
               </Link>
@@ -142,6 +158,14 @@ export default function CreditsPage() {
         {error && (
           <div className="mb-6 rounded-md bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4">
             <p className="text-sm text-red-800 dark:text-red-400">{error}</p>
+          </div>
+        )}
+
+        {isTeamRep && (
+          <div className="mb-6 rounded-md bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-4">
+            <p className="text-sm text-blue-800 dark:text-blue-400">
+              You are a team member. Credits are managed by your team manager. If you need more credits, please contact your manager.
+            </p>
           </div>
         )}
 
@@ -208,10 +232,11 @@ export default function CreditsPage() {
 
             <button
               onClick={handlePurchase}
-              disabled={loading || credits < 1}
+              disabled={loading || credits < 1 || isTeamRep}
               className="w-full btn-gold disabled:cursor-not-allowed disabled:opacity-50"
+              title={isTeamRep ? 'Team members cannot purchase credits' : undefined}
             >
-              {loading ? 'Processing...' : credits > 1000 ? 'Contact Sales' : `Purchase ${credits} Credit${credits !== 1 ? 's' : ''}`}
+              {loading ? 'Processing...' : credits > 1000 ? 'Contact Sales' : isTeamRep ? 'Contact Your Manager' : `Purchase ${credits} Credit${credits !== 1 ? 's' : ''}`}
             </button>
 
             <p className="mt-3 text-center text-xs text-gray-500 dark:text-gray-400">

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import Stripe from 'stripe';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceClient } from '@/lib/supabase/server';
 
 // Lazy initialize Stripe to avoid build-time errors
 function getStripe() {
@@ -50,12 +50,33 @@ export async function POST(request: NextRequest) {
   try {
     // Get authenticated user
     const supabase = await createClient();
+    const supabaseAdmin = createServiceClient();
+
     const {
       data: { user: authUser },
     } = await supabase.auth.getUser();
 
     if (!authUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Get user's role
+    const { data: user } = await supabaseAdmin
+      .from('users')
+      .select('role')
+      .eq('email', authUser.email)
+      .single();
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // Check if user is a team rep - they cannot purchase credits
+    if (user.role === 'rep' || user.role === 'team_rep') {
+      return NextResponse.json(
+        { error: 'Team members cannot purchase credits. Please contact your manager.' },
+        { status: 403 }
+      );
     }
 
     // Get request body

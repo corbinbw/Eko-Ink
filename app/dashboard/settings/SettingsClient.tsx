@@ -151,6 +151,11 @@ export default function SettingsClient({ user: initialUser, notesSent }: Setting
               <Link href="/dashboard/notes" className="text-sm font-medium text-gray-700 hover:text-royal-ink dark:text-gray-300 dark:hover:text-antique-gold transition-colors">
                 Notes
               </Link>
+              {(user.role === 'manager' || user.role === 'executive') && (
+                <Link href="/dashboard/team" className="text-sm font-medium text-gray-700 hover:text-royal-ink dark:text-gray-300 dark:hover:text-antique-gold transition-colors">
+                  Team
+                </Link>
+              )}
               <Link href="/dashboard/credits" className="text-sm font-medium text-gray-700 hover:text-royal-ink dark:text-gray-300 dark:hover:text-antique-gold transition-colors">
                 Credits
               </Link>
