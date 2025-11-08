@@ -5,10 +5,11 @@ import Link from 'next/link';
 
 // Tiered pricing function
 function getPricePerCredit(credits: number): number {
-  if (credits >= 500) return 4.45;
-  if (credits >= 250) return 4.60;
-  if (credits >= 100) return 4.75;
-  return 4.99;
+  if (credits >= 250) return 4.75;
+  if (credits >= 100) return 4.99;
+  if (credits >= 50) return 5.49;
+  if (credits >= 10) return 5.99;
+  return 6.99;
 }
 
 function calculateTotalPrice(credits: number): number {
@@ -250,20 +251,24 @@ export default function CreditsPage() {
           <h3 className="mb-4 text-base font-semibold text-royal-ink dark:text-gray-100">Volume Pricing</h3>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-gray-600 dark:text-gray-400">1-99 credits</span>
-              <span className="font-medium text-royal-ink dark:text-gray-100">$4.99</span>
+              <span className="text-gray-600 dark:text-gray-400">1-9 credits</span>
+              <span className="font-medium text-royal-ink dark:text-gray-100">$6.99</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600 dark:text-gray-400">10-49 credits</span>
+              <span className="font-medium text-royal-ink dark:text-gray-100">$5.99</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600 dark:text-gray-400">50-99 credits</span>
+              <span className="font-medium text-royal-ink dark:text-gray-100">$5.49</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-600 dark:text-gray-400">100-249 credits</span>
+              <span className="font-medium text-royal-ink dark:text-gray-100">$4.99</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600 dark:text-gray-400">250-999 credits</span>
               <span className="font-medium text-royal-ink dark:text-gray-100">$4.75</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600 dark:text-gray-400">250-499 credits</span>
-              <span className="font-medium text-royal-ink dark:text-gray-100">$4.60</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600 dark:text-gray-400">500-999 credits</span>
-              <span className="font-medium text-royal-ink dark:text-gray-100">$4.45</span>
             </div>
             <div className="flex justify-between pt-2 border-t border-gray-200 dark:border-gray-700">
               <span className="text-gray-600 dark:text-gray-400">1000+</span>
