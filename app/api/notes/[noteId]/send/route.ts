@@ -113,7 +113,12 @@ export async function POST(
     const deal = note.deals as any;
     const customerAddress = deal.customer_address;
 
-    if (!customerAddress || !customerAddress.street1 || !customerAddress.city || !customerAddress.state || !customerAddress.zip) {
+    // Support both naming conventions (line1/postal_code and street1/zip)
+    const line1 = customerAddress?.line1 || customerAddress?.street1;
+    const line2 = customerAddress?.line2 || customerAddress?.street2;
+    const postalCode = customerAddress?.postal_code || customerAddress?.zip;
+
+    if (!customerAddress || !line1 || !customerAddress.city || !customerAddress.state || !postalCode) {
       return NextResponse.json(
         { error: 'Customer address is incomplete' },
         { status: 400 }
@@ -134,12 +139,13 @@ export async function POST(
         lastName: deal.customer_last_name,
         city: customerAddress.city,
         state: customerAddress.state,
-        zip: customerAddress.zip,
+        zip: postalCode,
       },
     });
 
     try {
       // Send to Handwrite.io
+      // Note: Handwrite.io API expects street1/street2/zip field names
       const result = await handwriteIO.sendLetter({
         message,
         handwriting_id,
@@ -148,11 +154,11 @@ export async function POST(
           firstName: deal.customer_first_name,
           lastName: deal.customer_last_name,
           company: customerAddress.company,
-          street1: customerAddress.street1,
-          street2: customerAddress.street2,
+          street1: line1, // Map from our line1 to Handwrite.io's street1
+          street2: line2, // Map from our line2 to Handwrite.io's street2
           city: customerAddress.city,
           state: customerAddress.state,
-          zip: customerAddress.zip,
+          zip: postalCode, // Map from our postal_code to Handwrite.io's zip
         },
       });
 

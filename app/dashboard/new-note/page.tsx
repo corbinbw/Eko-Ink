@@ -26,6 +26,7 @@ export default function NewNotePage() {
 
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [audioUrl, setAudioUrl] = useState('');
+  const [transcript, setTranscript] = useState('');
 
   // Fetch user role for navigation
   useEffect(() => {
@@ -74,13 +75,15 @@ export default function NewNotePage() {
       formDataToSend.append('dealValue', formData.dealValue);
       formDataToSend.append('personalDetail', formData.personalDetail);
 
-      // Add audio file or URL
+      // Add audio file, URL, or transcript
       if (audioFile) {
         formDataToSend.append('audioFile', audioFile);
       } else if (audioUrl) {
         formDataToSend.append('audioUrl', audioUrl);
+      } else if (transcript) {
+        formDataToSend.append('transcript', transcript);
       } else {
-        throw new Error('Please provide either an audio file or URL');
+        throw new Error('Please provide either an audio file, URL, or transcript');
       }
 
       const response = await fetch('/api/deals', {
@@ -95,8 +98,11 @@ export default function NewNotePage() {
 
       const data = await response.json();
 
-      // Redirect to dashboard or note detail page
-      router.push('/dashboard');
+      // Show success message and redirect to notes page
+      alert(data.message || 'Deal created! Your note is being generated and will be ready for review shortly.');
+
+      // Redirect to notes page where they can see the note once it's ready
+      router.push('/dashboard/notes');
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -315,7 +321,7 @@ export default function NewNotePage() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Upload Audio File *
+                  Upload Audio File
                 </label>
                 <input
                   type="file"
@@ -323,6 +329,7 @@ export default function NewNotePage() {
                   onChange={(e) => {
                     setAudioFile(e.target.files?.[0] || null);
                     setAudioUrl(''); // Clear URL if file is selected
+                    setTranscript(''); // Clear transcript if file is selected
                   }}
                   className="block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-antique-gold/10 dark:file:bg-antique-gold/20 file:text-antique-gold-700 dark:file:text-antique-gold hover:file:bg-antique-gold/20 dark:hover:file:bg-antique-gold/30"
                 />
@@ -351,10 +358,41 @@ export default function NewNotePage() {
                   onChange={(e) => {
                     setAudioUrl(e.target.value);
                     setAudioFile(null); // Clear file if URL is entered
+                    setTranscript(''); // Clear transcript if URL is entered
                   }}
                   className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 shadow-sm focus:border-royal-ink dark:focus:border-antique-gold focus:outline-none focus:ring-royal-ink dark:focus:ring-antique-gold"
                   placeholder="https://example.com/call-recording.mp3"
                 />
+              </div>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-300 dark:border-gray-700" />
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="bg-white dark:bg-gray-800 px-2 text-gray-500 dark:text-gray-400">OR</span>
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="transcript" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Paste Transcript
+                </label>
+                <textarea
+                  id="transcript"
+                  rows={8}
+                  value={transcript}
+                  onChange={(e) => {
+                    setTranscript(e.target.value);
+                    setAudioFile(null); // Clear file if transcript is entered
+                    setAudioUrl(''); // Clear URL if transcript is entered
+                  }}
+                  className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 shadow-sm focus:border-royal-ink dark:focus:border-antique-gold focus:outline-none focus:ring-royal-ink dark:focus:ring-antique-gold font-mono text-sm"
+                  placeholder="Paste the full call transcript here if you already have it..."
+                />
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  If you already have the transcript, you can paste it here instead of uploading audio
+                </p>
               </div>
             </div>
           </div>

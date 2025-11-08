@@ -41,6 +41,8 @@ export default function SettingsClient({ user: initialUser, notesSent }: Setting
   });
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [joinTeamCode, setJoinTeamCode] = useState('');
+  const [joiningTeam, setJoiningTeam] = useState(false);
 
   // Get base URL for invite links (works in browser)
   const getBaseUrl = () => {
@@ -141,6 +143,45 @@ export default function SettingsClient({ user: initialUser, notesSent }: Setting
     }
 
     router.refresh();
+  };
+
+  const handleJoinTeam = async () => {
+    if (!joinTeamCode.trim()) {
+      setError('Please enter an invite code');
+      return;
+    }
+
+    setJoiningTeam(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await fetch('/api/team/join', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ inviteCode: joinTeamCode.trim() }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to join team');
+      }
+
+      setSuccess('Successfully joined the team! Refreshing...');
+      setJoinTeamCode('');
+
+      // Refresh the page to show updated role and team info
+      setTimeout(() => {
+        router.refresh();
+        window.location.reload();
+      }, 1500);
+    } catch (err: any) {
+      setError(err.message || 'Failed to join team');
+    } finally {
+      setJoiningTeam(false);
+    }
   };
 
   return (
@@ -280,6 +321,33 @@ export default function SettingsClient({ user: initialUser, notesSent }: Setting
 
           {/* Additional Settings */}
           <div className="lg:col-span-2 space-y-6">
+            {/* Join a Team - Only for solo reps */}
+            {user.role === 'rep' && !user.manager_id && (
+              <div className="card-elegant">
+                <h3 className="text-lg font-semibold text-royal-ink dark:text-gray-100 mb-4">Join a Team</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                  Have an invite code from a team manager? Enter it below to join their team and share credits.
+                </p>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="text"
+                    value={joinTeamCode}
+                    onChange={(e) => setJoinTeamCode(e.target.value.toUpperCase())}
+                    placeholder="Enter invite code"
+                    className="flex-1 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-4 py-2 text-sm text-gray-900 dark:text-gray-100 font-mono uppercase"
+                    disabled={joiningTeam}
+                  />
+                  <button
+                    onClick={handleJoinTeam}
+                    disabled={joiningTeam || !joinTeamCode.trim()}
+                    className="px-4 py-2 bg-royal-ink dark:bg-antique-gold text-white dark:text-gray-900 text-sm font-semibold rounded-md hover:bg-royal-ink-600 dark:hover:bg-antique-gold-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                  >
+                    {joiningTeam ? 'Joining...' : 'Join Team'}
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Team Management - Only for managers */}
             {(user.role === 'manager' || user.role === 'executive') && user.invite_code && (
               <div className="card-elegant">

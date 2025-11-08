@@ -67,13 +67,23 @@ export default function NoteEditor({ note }: NoteEditorProps) {
         throw new Error('Failed to approve note');
       }
 
-      setSuccess('Note approved successfully!');
+      const data = await response.json();
+
+      // Check if note was auto-sent
+      if (data.auto_send?.triggered) {
+        setSuccess('Note approved and automatically sent!');
+      } else if (data.reached_learning_threshold) {
+        setSuccess('Note approved! Style analysis is being processed. After 25 notes, future notes will be sent automatically.');
+      } else {
+        setSuccess('Note approved successfully!');
+      }
+
       router.refresh();
 
-      // Redirect to notes list after 1.5 seconds
+      // Redirect to notes list after 2 seconds
       setTimeout(() => {
         router.push('/dashboard/notes');
-      }, 1500);
+      }, 2000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to approve note');
     } finally {

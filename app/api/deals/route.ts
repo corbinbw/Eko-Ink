@@ -37,6 +37,7 @@ export async function POST(request: NextRequest) {
 
     const audioFile = formData.get('audioFile') as File | null;
     const audioUrl = formData.get('audioUrl') as string | null;
+    const transcript = formData.get('transcript') as string | null;
 
     // Get user's account
     const { data: user, error: userError } = await supabaseAdmin
@@ -164,7 +165,9 @@ export async function POST(request: NextRequest) {
         deal_id: deal.id,
         mp3_url: audioUrl,
         mp3_storage_path: mp3StoragePath,
-        transcript_status: 'pending',
+        transcript: transcript || null,
+        transcript_status: transcript ? 'complete' : 'pending',
+        transcribed_at: transcript ? new Date().toISOString() : null,
       })
       .select()
       .single();
@@ -180,7 +183,7 @@ export async function POST(request: NextRequest) {
         deal_id: deal.id,
         user_id: userData.id,
         call_id: call.id,
-        draft_text: 'Generating note...', // Placeholder until AI generates the actual note
+        draft_text: '', // Empty until AI generates
         status: 'pending', // Pending until AI generates the note
         requires_approval: true,
       })
@@ -191,11 +194,33 @@ export async function POST(request: NextRequest) {
       throw new Error(`Failed to create note: ${noteError.message}`);
     }
 
+    // Automatically trigger note generation in the background
+    console.log(`Auto-triggering note generation for note ${note.id}`);
+
+    // Call the generation endpoint (fire and forget - don't block response)
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    fetch(`${baseUrl}/api/notes/${note.id}/generate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        // Forward auth cookie
+        cookie: request.headers.get('cookie') || '',
+      },
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        console.log('Note generation triggered:', data);
+      })
+      .catch((err) => {
+        console.error('Error triggering note generation:', err);
+      });
+
     return NextResponse.json({
       success: true,
       deal,
       call,
       note,
+      message: 'Deal created! Your note is being generated and will be ready for review shortly.',
     });
   } catch (error: any) {
     console.error('Error creating deal:', error);

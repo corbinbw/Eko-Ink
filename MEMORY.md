@@ -130,6 +130,56 @@ ASSEMBLYAI_API_KEY=d2fecc53765a4dc2808f83a0081fd3e7
 
 ### 🚀 Recent Changes
 
+#### November 6, 2025 - AI Learning System Implementation
+- **Complete AI learning system built!** 🎉
+- **Phase 1: Improved Base AI Generation**
+  - Updated prompt to target 250-320 characters (was inconsistent before)
+  - Added validation with retry logic (up to 2 attempts)
+  - Increased transcript context from 1000 to 2000 characters
+  - Lowered temperature from 0.8 to 0.7 for consistency
+  - Added inline example in prompt for better guidance
+  - Emergency truncation for over-limit notes
+
+- **Phase 2: Edit Tracking System**
+  - Captures diff between AI draft and user's final version
+  - Stores detailed feedback in `notes.feedback_changes` JSONB field
+  - Tracks: character count, word count, sentence count, length delta
+  - Also tracks intermediate edits via PATCH endpoint
+  - All edits stored in `notes.feedback_text` for learning
+
+- **Phase 3: Learning Engine**
+  - New endpoint: `/api/learning/analyze-style`
+  - Automatically triggered when user completes note #25
+  - Uses Claude Sonnet to analyze first 10 approved notes
+  - Extracts comprehensive style profile: tone, structure, phrases, examples
+  - Stores in `users.tone_preferences` JSONB field
+  - Sets `learning_complete = true` when done
+
+- **Phase 4: Personalized Generation**
+  - Generation endpoint now checks for learned style
+  - If `learning_complete = true`, uses personalized prompt
+  - Injects: tone description, common phrases, sentence structure, best examples
+  - Temperature lowered to 0.6 for learned style (more consistency)
+  - Falls back to default prompt for first 25 notes
+
+- **Phase 5: Auto-Send After Learning**
+  - After note #25, notes are automatically sent after approval
+  - No manual "Send" button needed once learning is complete
+  - UI shows "Note approved and automatically sent!" message
+  - Still deducts credits and logs events properly
+
+**How It Works:**
+1. **Notes 1-25**: Rep edits each note, system learns their style
+2. **Note #25**: Triggers AI analysis of all previous notes
+3. **Note #26+**: AI generates in rep's learned style, auto-sends after approval
+
+**Files Modified:**
+- `/app/api/notes/[noteId]/generate/route.ts` - Improved prompt, validation, learned style
+- `/app/api/notes/[noteId]/approve/route.ts` - Edit tracking, auto-send trigger
+- `/app/api/notes/[noteId]/route.ts` - Intermediate edit tracking
+- `/app/api/learning/analyze-style/route.ts` - NEW: Style analysis engine
+- `/app/dashboard/notes/[id]/NoteEditor.tsx` - Auto-send UI feedback
+
 #### November 5, 2025 - UI/UX Improvements & Team Planning
 - Added EkoInk logo as favicon (icon.png in /app directory)
 - Updated all dashboard headers with cream background (#f8f7f2) to match logo
@@ -186,6 +236,25 @@ ASSEMBLYAI_API_KEY=d2fecc53765a4dc2808f83a0081fd3e7
    - Several background dev servers accumulated during development
    - Should kill old ones: 658883, 24bcc6, 0b6394, d5604d, 3d1ba3
    - Active server: faef7d
+
+3. **🔴 CRITICAL: Join Team Feature Not Working (November 6, 2025)**
+   - **Issue**: The "Join a Team" feature in Settings is not working properly
+   - **Location**: `/app/dashboard/settings/SettingsClient.tsx` - "Join a Team" section
+   - **API Endpoint**: `/app/api/team/join/route.ts`
+   - **What it should do**: Allow solo reps to enter a manager's invite code and join their team after signup
+   - **Current Status**: User reports it's not working (needs debugging)
+   - **Context**:
+     - User can sign up normally without invite code
+     - Then go to Settings and enter manager's invite code (e.g., `250262e5`)
+     - Should update their `manager_id` and `account_id` to join the team
+     - This is an alternative to the invite link signup flow
+   - **Priority**: HIGH - This is an important feature for user experience
+   - **Next Steps**:
+     - Test the flow end-to-end
+     - Check browser console for errors
+     - Verify API endpoint is being called
+     - Check database to see if user record is being updated
+     - May need to add better error handling/logging
 
 ### 📝 Next Steps / TODO
 

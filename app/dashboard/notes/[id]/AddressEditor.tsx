@@ -6,12 +6,16 @@ import { useRouter } from 'next/navigation';
 interface AddressEditorProps {
   dealId: string;
   currentAddress: {
-    street1?: string;
-    street2?: string;
+    line1?: string;
+    line2?: string;
     city?: string;
     state?: string;
+    postal_code?: string;
+    country?: string;
+    // Also support old field names for backwards compatibility
+    street1?: string;
+    street2?: string;
     zip?: string;
-    company?: string;
   } | null;
   customerName: {
     firstName: string;
@@ -24,16 +28,18 @@ export default function AddressEditor({ dealId, currentAddress, customerName }: 
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Normalize the address data (support both naming conventions)
   const [address, setAddress] = useState({
-    street1: currentAddress?.street1 || '',
-    street2: currentAddress?.street2 || '',
+    line1: currentAddress?.line1 || currentAddress?.street1 || '',
+    line2: currentAddress?.line2 || currentAddress?.street2 || '',
     city: currentAddress?.city || '',
     state: currentAddress?.state || '',
-    zip: currentAddress?.zip || '',
-    company: currentAddress?.company || '',
+    postal_code: currentAddress?.postal_code || currentAddress?.zip || '',
+    country: currentAddress?.country || 'US',
   });
 
-  const isComplete = address.street1 && address.city && address.state && address.zip;
+  const isComplete = address.line1 && address.city && address.state && address.postal_code;
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -63,12 +69,12 @@ export default function AddressEditor({ dealId, currentAddress, customerName }: 
 
   const handleCancel = () => {
     setAddress({
-      street1: currentAddress?.street1 || '',
-      street2: currentAddress?.street2 || '',
+      line1: currentAddress?.line1 || currentAddress?.street1 || '',
+      line2: currentAddress?.line2 || currentAddress?.street2 || '',
       city: currentAddress?.city || '',
       state: currentAddress?.state || '',
-      zip: currentAddress?.zip || '',
-      company: currentAddress?.company || '',
+      postal_code: currentAddress?.postal_code || currentAddress?.zip || '',
+      country: currentAddress?.country || 'US',
     });
     setIsEditing(false);
     setError(null);
@@ -110,8 +116,8 @@ export default function AddressEditor({ dealId, currentAddress, customerName }: 
             </label>
             <input
               type="text"
-              value={address.street1}
-              onChange={(e) => setAddress({ ...address, street1: e.target.value })}
+              value={address.line1}
+              onChange={(e) => setAddress({ ...address, line1: e.target.value })}
               placeholder="123 Main St"
               className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500"
             />
@@ -123,8 +129,8 @@ export default function AddressEditor({ dealId, currentAddress, customerName }: 
             </label>
             <input
               type="text"
-              value={address.street2}
-              onChange={(e) => setAddress({ ...address, street2: e.target.value })}
+              value={address.line2}
+              onChange={(e) => setAddress({ ...address, line2: e.target.value })}
               placeholder="Apt 4B"
               className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500"
             />
@@ -139,7 +145,7 @@ export default function AddressEditor({ dealId, currentAddress, customerName }: 
                 type="text"
                 value={address.city}
                 onChange={(e) => setAddress({ ...address, city: e.target.value })}
-                placeholder="San Francisco"
+                placeholder="Provo"
                 className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500"
               />
             </div>
@@ -152,40 +158,25 @@ export default function AddressEditor({ dealId, currentAddress, customerName }: 
                 type="text"
                 value={address.state}
                 onChange={(e) => setAddress({ ...address, state: e.target.value.toUpperCase() })}
-                placeholder="CA"
+                placeholder="UT"
                 maxLength={2}
                 className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm uppercase focus:border-blue-500 focus:ring-blue-500"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                ZIP Code * (5 digits)
-              </label>
-              <input
-                type="text"
-                value={address.zip}
-                onChange={(e) => setAddress({ ...address, zip: e.target.value.replace(/\D/g, '') })}
-                placeholder="94102"
-                maxLength={5}
-                className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Company (optional)
-              </label>
-              <input
-                type="text"
-                value={address.company}
-                onChange={(e) => setAddress({ ...address, company: e.target.value })}
-                placeholder="Acme Corp"
-                className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500"
-              />
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              ZIP Code * (5 digits)
+            </label>
+            <input
+              type="text"
+              value={address.postal_code}
+              onChange={(e) => setAddress({ ...address, postal_code: e.target.value.replace(/\D/g, '') })}
+              placeholder="84604"
+              maxLength={5}
+              className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500"
+            />
           </div>
 
           <div className="flex gap-3 pt-2">
@@ -198,7 +189,7 @@ export default function AddressEditor({ dealId, currentAddress, customerName }: 
             </button>
             <button
               onClick={handleSave}
-              disabled={isSaving || !address.street1 || !address.city || !address.state || !address.zip}
+              disabled={isSaving || !address.line1 || !address.city || !address.state || !address.postal_code}
               className="flex-1 rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 dark:hover:bg-blue-500 disabled:opacity-50"
             >
               {isSaving ? 'Saving...' : 'Save Address'}
@@ -212,24 +203,19 @@ export default function AddressEditor({ dealId, currentAddress, customerName }: 
               {customerName.firstName} {customerName.lastName}
             </dt>
           </div>
-          {address.company && (
-            <div>
-              <dd className="text-gray-700 dark:text-gray-300">{address.company}</dd>
-            </div>
-          )}
           <div>
-            <dd className="text-gray-700 dark:text-gray-300">{address.street1 || <em className="text-red-600 dark:text-red-400">Missing street address</em>}</dd>
+            <dd className="text-gray-700 dark:text-gray-300">{address.line1 || <em className="text-red-600 dark:text-red-400">Missing street address</em>}</dd>
           </div>
-          {address.street2 && (
+          {address.line2 && (
             <div>
-              <dd className="text-gray-700 dark:text-gray-300">{address.street2}</dd>
+              <dd className="text-gray-700 dark:text-gray-300">{address.line2}</dd>
             </div>
           )}
           <div>
             <dd className="text-gray-700 dark:text-gray-300">
               {address.city || <em className="text-red-600 dark:text-red-400">Missing city</em>},{' '}
               {address.state || <em className="text-red-600 dark:text-red-400">Missing state</em>}{' '}
-              {address.zip || <em className="text-red-600 dark:text-red-400">Missing ZIP</em>}
+              {address.postal_code || <em className="text-red-600 dark:text-red-400">Missing ZIP</em>}
             </dd>
           </div>
         </dl>

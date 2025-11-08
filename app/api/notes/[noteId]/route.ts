@@ -41,11 +41,25 @@ export async function PATCH(
       );
     }
 
+    // Get existing note to track changes
+    const { data: existingNote } = await supabaseAdmin
+      .from('notes')
+      .select('draft_text, feedback_text')
+      .eq('id', noteId)
+      .eq('user_id', user.id)
+      .single();
+
+    // Track that the user is making edits (for learning system)
+    const editNote = existingNote?.draft_text !== draft_text
+      ? `Edited at ${new Date().toISOString()}: Changed from ${existingNote?.draft_text?.length || 0} to ${draft_text.length} characters`
+      : existingNote?.feedback_text || '';
+
     // Update the note
     const { data: note, error } = await supabaseAdmin
       .from('notes')
       .update({
         draft_text,
+        feedback_text: editNote, // Track that edits were made
       })
       .eq('id', noteId)
       .eq('user_id', user.id)
