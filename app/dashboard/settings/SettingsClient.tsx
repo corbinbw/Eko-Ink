@@ -14,6 +14,7 @@ interface User {
   name: string;
   role: string;
   account_id: string;
+  manager_id?: string | null;
   signature_image_url?: string | null;
   invite_code?: string | null;
   accounts: {
