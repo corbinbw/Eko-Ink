@@ -41,8 +41,8 @@ export async function POST(
         }
 
         // Check account access
-        const deal = note.deals as any;
-        if (deal.account_id !== context.accountId) {
+        const deal = Array.isArray(note.deals) ? note.deals[0] : note.deals;
+        if (!deal || (deal as any).account_id !== context.accountId) {
           return apiError('Note not found', 404);
         }
 
@@ -71,7 +71,7 @@ export async function POST(
         }
 
         // Parse customer address
-        const customerAddress = deal.customer_address;
+        const customerAddress = (deal as any).customer_address;
 
         // Support both naming conventions
         const line1 = customerAddress?.line1 || customerAddress?.street1;
@@ -93,8 +93,8 @@ export async function POST(
             handwriting_id,
             card_id,
             recipient: {
-              firstName: deal.customer_first_name,
-              lastName: deal.customer_last_name,
+              firstName: (deal as any).customer_first_name,
+              lastName: (deal as any).customer_last_name,
               company: customerAddress.company,
               street1: line1,
               street2: line2,

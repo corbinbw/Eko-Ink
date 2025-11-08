@@ -50,7 +50,8 @@ export async function GET(
         }
 
         // Check account access
-        if (note.deals.account_id !== context.accountId) {
+        const deal = Array.isArray(note.deals) ? note.deals[0] : note.deals;
+        if (!deal || deal.account_id !== context.accountId) {
           return apiError('Note not found', 404);
         }
 
@@ -69,8 +70,8 @@ export async function GET(
             sent_at: note.sent_at,
             delivered_at: note.delivered_at,
             customer: {
-              first_name: note.deals.customer_first_name,
-              last_name: note.deals.customer_last_name,
+              first_name: deal.customer_first_name,
+              last_name: deal.customer_last_name,
             },
           },
         });
@@ -126,7 +127,8 @@ export async function PATCH(
           return apiError('Note not found', 404);
         }
 
-        if (existingNote.deals.account_id !== context.accountId) {
+        const deal2 = Array.isArray(existingNote.deals) ? existingNote.deals[0] : existingNote.deals;
+        if (!deal2 || deal2.account_id !== context.accountId) {
           return apiError('Note not found', 404);
         }
 

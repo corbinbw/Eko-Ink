@@ -28,7 +28,8 @@ export async function POST(
           return apiError('Note not found', 404);
         }
 
-        if (existingNote.deals.account_id !== context.accountId) {
+        const deal = Array.isArray(existingNote.deals) ? existingNote.deals[0] : existingNote.deals;
+        if (!deal || deal.account_id !== context.accountId) {
           return apiError('Note not found', 404);
         }
 
