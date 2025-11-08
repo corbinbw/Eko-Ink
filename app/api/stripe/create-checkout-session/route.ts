@@ -13,37 +13,38 @@ function getStripe() {
 const CREDIT_PACKAGES = {
   single: {
     credits: 1,
-    price: 500, // $5.00 in cents
+    price: 699, // $6.99 in cents
     name: 'Single Note',
   },
   starter: {
     credits: 10,
-    price: 3990, // $39.90 in cents
+    price: 5990, // $59.90 in cents ($5.99 each)
     name: 'Starter Pack - 10 Credits',
   },
   popular: {
     credits: 25,
-    price: 7475, // $74.75 in cents
+    price: 14975, // $149.75 in cents ($5.99 each)
     name: 'Popular Pack - 25 Credits',
   },
   business: {
     credits: 50,
-    price: 12450, // $124.50 in cents
+    price: 27450, // $274.50 in cents ($5.49 each)
     name: 'Business Pack - 50 Credits',
   },
   enterprise: {
     credits: 100,
-    price: 19900, // $199.00 in cents
+    price: 49900, // $499.00 in cents ($4.99 each)
     name: 'Enterprise Pack - 100 Credits',
   },
 };
 
 // Helper function for tiered pricing
 function getPricePerCredit(credits: number): number {
-  if (credits >= 500) return 4.45;
-  if (credits >= 250) return 4.60;
-  if (credits >= 100) return 4.75;
-  return 4.99;
+  if (credits >= 250) return 4.75;
+  if (credits >= 100) return 4.99;
+  if (credits >= 50) return 5.49;
+  if (credits >= 10) return 5.99;
+  return 6.99;
 }
 
 export async function POST(request: NextRequest) {
