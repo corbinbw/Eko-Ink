@@ -99,12 +99,10 @@ export async function validateApiKey(key: string): Promise<ApiKeyValidation> {
     }
 
     // Update last_used_at (fire and forget)
-    supabase
+    void supabase
       .from('api_keys')
       .update({ last_used_at: new Date().toISOString() })
-      .eq('id', apiKey.id)
-      .then(() => {})
-      .catch((err) => console.error('Failed to update last_used_at:', err));
+      .eq('id', apiKey.id);
 
     return {
       valid: true,
