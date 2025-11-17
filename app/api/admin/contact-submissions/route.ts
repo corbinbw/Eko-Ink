@@ -21,7 +21,8 @@ export async function PATCH(request: NextRequest) {
       .eq('id', user.id)
       .single();
 
-    if (!userAccount?.account?.is_admin) {
+    const accountData = userAccount?.account as any;
+    if (!accountData || (Array.isArray(accountData) ? !accountData[0]?.is_admin : !accountData?.is_admin)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

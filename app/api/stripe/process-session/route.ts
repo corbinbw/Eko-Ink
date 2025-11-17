@@ -6,7 +6,7 @@ import { createClient, createServiceClient } from '@/lib/supabase/server';
 // Lazy initialize Stripe to avoid build-time errors
 function getStripe() {
   return new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-    apiVersion: '2025-09-30.clover',
+    apiVersion: '2025-10-29.clover',
   });
 }
 
