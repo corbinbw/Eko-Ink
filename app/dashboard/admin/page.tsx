@@ -45,10 +45,23 @@ interface ApiKey {
   created_at: string;
 }
 
+interface ContactSubmission {
+  id: string;
+  name: string;
+  email: string;
+  company: string | null;
+  message: string;
+  status: string;
+  read_at: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
 interface AdminData {
   accounts: Account[];
   users: User[];
   apiKeys: ApiKey[];
+  contactSubmissions: ContactSubmission[];
   stats: {
     totalRevenue: number; // in cents
     cardsSentThisMonth: number;
@@ -66,7 +79,7 @@ export default function AdminDashboard() {
   const [data, setData] = useState<AdminData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [view, setView] = useState<'accounts' | 'users' | 'api-keys'>('accounts');
+  const [view, setView] = useState<'accounts' | 'users' | 'api-keys' | 'contact'>('accounts');
 
   useEffect(() => {
     fetchData();
@@ -203,6 +216,16 @@ export default function AdminDashboard() {
           >
             API Keys ({data.apiKeys.filter((k) => !k.revoked_at).length})
           </button>
+          <button
+            onClick={() => setView('contact')}
+            className={`${
+              view === 'contact'
+                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+          >
+            Contact Requests ({data.contactSubmissions?.filter((c) => c.status === 'new').length || 0})
+          </button>
         </nav>
       </div>
 
@@ -210,6 +233,7 @@ export default function AdminDashboard() {
       {view === 'accounts' && <AccountsView accounts={data.accounts} />}
       {view === 'users' && <UsersView users={data.users} accounts={data.accounts} />}
       {view === 'api-keys' && <ApiKeysView apiKeys={data.apiKeys} accounts={data.accounts} />}
+      {view === 'contact' && <ContactView contactSubmissions={data.contactSubmissions || []} onUpdate={fetchData} />}
     </div>
   );
 }
@@ -501,3 +525,136 @@ function ApiKeysView({ apiKeys, accounts }: { apiKeys: ApiKey[]; accounts: Accou
     </div>
   );
 }
+
+function ContactView({ contactSubmissions, onUpdate }: { contactSubmissions: ContactSubmission[]; onUpdate: () => void }) {
+  const [updating, setUpdating] = useState<string | null>(null);
+
+  const updateStatus = async (id: string, status: string) => {
+    setUpdating(id);
+    try {
+      const response = await fetch('/api/admin/contact-submissions', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status }),
+      });
+
+      if (response.ok) {
+        onUpdate();
+      }
+    } catch (error) {
+      console.error('Error updating contact submission:', error);
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <thead className="bg-gray-50 dark:bg-gray-900">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                Name
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                Email
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                Company
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                Message
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                Status
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                Submitted
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+            {contactSubmissions.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                  No contact submissions yet
+                </td>
+              </tr>
+            ) : (
+              contactSubmissions.map((submission) => (
+                <tr
+                  key={submission.id}
+                  className={`hover:bg-gray-50 dark:hover:bg-gray-700 ${
+                    submission.status === 'new' ? 'bg-blue-50 dark:bg-blue-900/20' : ''
+                  }`}
+                >
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      {submission.name}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <a
+                      href={`mailto:${submission.email}`}
+                      className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                    >
+                      {submission.email}
+                    </a>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                    {submission.company || '—'}
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="text-sm text-gray-900 dark:text-gray-100 max-w-md">
+                      {submission.message.length > 100
+                        ? `${submission.message.substring(0, 100)}...`
+                        : submission.message
+                      }
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                      submission.status === 'new'
+                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                        : submission.status === 'contacted'
+                        ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                        : submission.status === 'qualified'
+                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                        : submission.status === 'spam'
+                        ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                        : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                    }`}>
+                      {submission.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    {formatDistanceToNow(new Date(submission.created_at), { addSuffix: true })}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <select
+                      value={submission.status}
+                      onChange={(e) => updateStatus(submission.id, e.target.value)}
+                      disabled={updating === submission.id}
+                      className="text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+                    >
+                      <option value="new">New</option>
+                      <option value="contacted">Contacted</option>
+                      <option value="qualified">Qualified</option>
+                      <option value="spam">Spam</option>
+                      <option value="archived">Archived</option>
+                    </select>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+

@@ -127,7 +127,9 @@ function SignupForm() {
     <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900 px-4 py-12">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-serif font-bold text-royal-ink dark:text-gray-100 italic">EkoInk</h1>
+          <Link href="/" className="inline-block mb-4">
+            <h1 className="text-4xl font-serif font-bold text-royal-ink dark:text-gray-100 italic hover:text-antique-gold transition-colors">EkoInk</h1>
+          </Link>
           <h2 className="mt-4 text-lg font-semibold text-royal-ink dark:text-gray-100">Create your account</h2>
           <p className="mt-2 text-gray-600 dark:text-gray-400">
             Start sending handwritten thank-you notes today

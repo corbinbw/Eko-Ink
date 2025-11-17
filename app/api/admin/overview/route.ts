@@ -201,6 +201,16 @@ export async function GET(request: NextRequest) {
     const avgCardsPerCustomer =
       activePayingCustomers > 0 ? (totalCardsSent! / activePayingCustomers).toFixed(1) : '0.0';
 
+    // Fetch all contact submissions
+    const { data: contactSubmissions, error: contactError } = await supabaseAdmin
+      .from('contact_submissions')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (contactError) {
+      console.error('Error fetching contact submissions:', contactError);
+    }
+
     // Build usage map
     const usageMap = new Map(
       (currentUsage || []).map((u) => [
@@ -227,6 +237,7 @@ export async function GET(request: NextRequest) {
         accounts: accountsWithDetails,
         users,
         apiKeys,
+        contactSubmissions: contactSubmissions || [],
         stats: {
           // NEW METRICS - Actually useful for business
           totalRevenue, // in cents

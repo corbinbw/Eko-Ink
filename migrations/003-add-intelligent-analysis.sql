@@ -34,3 +34,5 @@ CREATE INDEX idx_calls_analysis_status ON calls(analysis_status);
 --   ],
 --   "analysis_quality_score": 0.85
 -- }
+
+
