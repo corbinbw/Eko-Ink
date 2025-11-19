@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceClient } from '@/lib/supabase/server';
 
 export async function PATCH(request: NextRequest) {
   try {
     const supabase = await createClient();
+    const supabaseAdmin = createServiceClient();
 
     // Verify user is authenticated and admin
     const {
@@ -14,8 +15,8 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check if user is admin
-    const { data: userAccount } = await supabase
+    // Check if user is admin using service client to avoid RLS recursion
+    const { data: userAccount } = await supabaseAdmin
       .from('users')
       .select('account:accounts(is_admin)')
       .eq('id', user.id)
@@ -51,8 +52,8 @@ export async function PATCH(request: NextRequest) {
     // Always mark as read when updating
     updateData.read_at = new Date().toISOString();
 
-    // Update the submission
-    const { data, error } = await supabase
+    // Update the submission using service client to bypass RLS
+    const { data, error } = await supabaseAdmin
       .from('contact_submissions')
       .update(updateData)
       .eq('id', id)
