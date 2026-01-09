@@ -73,7 +73,7 @@ export async function POST(
       const finalSentences = userFinal.split(/[.!?]+/).filter(Boolean);
       const originalSentences = originalDraft.split(/[.!?]+/).filter(Boolean);
 
-      finalSentences.forEach(sentence => {
+      finalSentences.forEach((sentence: string) => {
         const words = sentence.trim().split(/\s+/);
         for (let i = 0; i < words.length - 1; i++) {
           const phrase = words.slice(i, i + 2).join(' ');
@@ -84,7 +84,7 @@ export async function POST(
       });
 
       // Find phrases user removed
-      originalSentences.forEach(sentence => {
+      originalSentences.forEach((sentence: string) => {
         const words = sentence.trim().split(/\s+/);
         for (let i = 0; i < words.length - 1; i++) {
           const phrase = words.slice(i, i + 2).join(' ');
