@@ -122,7 +122,8 @@ export default async function DashboardPage() {
         role,
         account_id,
         accounts:account_id (
-          credits_remaining
+          credits_remaining,
+          is_admin
         )
       `)
       .single();
