@@ -44,7 +44,7 @@ ADD COLUMN estimated_delivery TIMESTAMP WITH TIME ZONE;
 
 ```bash
 # Handwrite.io
-HANDWRITEIO_API_KEY=live_hw_6af124f7dba6bef4756d
+HANDWRITEIO_API_KEY=live_hw_YOUR_KEY_HERE
 # Default handwriting style ID (get from API)
 HANDWRITEIO_DEFAULT_HANDWRITING_ID=2RQNELR6R000
 # Default card ID (get from API)

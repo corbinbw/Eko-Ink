@@ -24,7 +24,7 @@ export default function NewNotePage() {
     personalDetail: '',
   });
 
-  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [audioFiles, setAudioFiles] = useState<File[]>([]);
   const [audioUrl, setAudioUrl] = useState('');
   const [transcript, setTranscript] = useState('');
 
@@ -50,59 +50,92 @@ export default function NewNotePage() {
     setError(null);
 
     try {
-      // Check file size before uploading
-      if (audioFile) {
-        const fileSizeMB = audioFile.size / (1024 * 1024);
-        if (fileSizeMB > 50) {
-          throw new Error(
-            `File size is ${fileSizeMB.toFixed(1)}MB, which exceeds the 50MB limit. Please use an MP3 file instead of WAV, or compress your audio file.`
-          );
+      // Check file sizes before uploading
+      if (audioFiles.length > 0) {
+        for (const file of audioFiles) {
+          const fileSizeMB = file.size / (1024 * 1024);
+          if (fileSizeMB > 50) {
+            throw new Error(
+              `File "${file.name}" is ${fileSizeMB.toFixed(1)}MB, which exceeds the 50MB limit. Please use MP3 files or compress your audio.`
+            );
+          }
         }
       }
 
-      const formDataToSend = new FormData();
+      // Process multiple files if provided (combine into one note)
+      if (audioFiles.length > 0) {
+        const formDataToSend = new FormData();
 
-      // Add deal details
-      formDataToSend.append('customerFirstName', formData.customerFirstName);
-      formDataToSend.append('customerLastName', formData.customerLastName);
-      formDataToSend.append('addressLine1', formData.addressLine1);
-      formDataToSend.append('addressLine2', formData.addressLine2);
-      formDataToSend.append('city', formData.city);
-      formDataToSend.append('state', formData.state);
-      formDataToSend.append('postalCode', formData.postalCode);
-      formDataToSend.append('country', formData.country);
-      formDataToSend.append('productName', formData.productName);
-      formDataToSend.append('dealValue', formData.dealValue);
-      formDataToSend.append('personalDetail', formData.personalDetail);
+        // Add deal details
+        formDataToSend.append('customerFirstName', formData.customerFirstName);
+        formDataToSend.append('customerLastName', formData.customerLastName);
+        formDataToSend.append('addressLine1', formData.addressLine1);
+        formDataToSend.append('addressLine2', formData.addressLine2);
+        formDataToSend.append('city', formData.city);
+        formDataToSend.append('state', formData.state);
+        formDataToSend.append('postalCode', formData.postalCode);
+        formDataToSend.append('country', formData.country);
+        formDataToSend.append('productName', formData.productName);
+        formDataToSend.append('dealValue', formData.dealValue);
+        formDataToSend.append('personalDetail', formData.personalDetail);
 
-      // Add audio file, URL, or transcript
-      if (audioFile) {
-        formDataToSend.append('audioFile', audioFile);
-      } else if (audioUrl) {
-        formDataToSend.append('audioUrl', audioUrl);
-      } else if (transcript) {
-        formDataToSend.append('transcript', transcript);
-      } else {
-        throw new Error('Please provide either an audio file, URL, or transcript');
-      }
+        // Add all audio files (backend will combine them)
+        audioFiles.forEach((file) => {
+          formDataToSend.append('audioFiles', file);
+        });
 
-      const response = await fetch('/api/deals', {
-        method: 'POST',
-        body: formDataToSend,
-      });
+        const response = await fetch('/api/deals', {
+          method: 'POST',
+          body: formDataToSend,
+        });
 
-      if (!response.ok) {
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.error || 'Failed to create deal');
+        }
+
         const data = await response.json();
-        throw new Error(data.error || 'Failed to create deal');
+        alert(data.message || `Deal created with ${audioFiles.length} audio files! Your note is being generated now.`);
+        router.push('/dashboard/notes');
+      } else {
+        // Single note creation (URL or transcript)
+        const formDataToSend = new FormData();
+
+        // Add deal details
+        formDataToSend.append('customerFirstName', formData.customerFirstName);
+        formDataToSend.append('customerLastName', formData.customerLastName);
+        formDataToSend.append('addressLine1', formData.addressLine1);
+        formDataToSend.append('addressLine2', formData.addressLine2);
+        formDataToSend.append('city', formData.city);
+        formDataToSend.append('state', formData.state);
+        formDataToSend.append('postalCode', formData.postalCode);
+        formDataToSend.append('country', formData.country);
+        formDataToSend.append('productName', formData.productName);
+        formDataToSend.append('dealValue', formData.dealValue);
+        formDataToSend.append('personalDetail', formData.personalDetail);
+
+        if (audioUrl) {
+          formDataToSend.append('audioUrl', audioUrl);
+        } else if (transcript) {
+          formDataToSend.append('transcript', transcript);
+        } else {
+          throw new Error('Please provide either audio file(s), URL, or transcript');
+        }
+
+        const response = await fetch('/api/deals', {
+          method: 'POST',
+          body: formDataToSend,
+        });
+
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.error || 'Failed to create deal');
+        }
+
+        const data = await response.json();
+        alert(data.message || 'Deal created! Your note is being generated and will be ready for review shortly.');
+        router.push('/dashboard/notes');
       }
-
-      const data = await response.json();
-
-      // Show success message and redirect to notes page
-      alert(data.message || 'Deal created! Your note is being generated and will be ready for review shortly.');
-
-      // Redirect to notes page where they can see the note once it's ready
-      router.push('/dashboard/notes');
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -321,21 +354,33 @@ export default function NewNotePage() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Upload Audio File
+                  Upload Audio File(s)
                 </label>
                 <input
                   type="file"
                   accept="audio/mpeg,audio/mp3,audio/wav"
+                  multiple
                   onChange={(e) => {
-                    setAudioFile(e.target.files?.[0] || null);
-                    setAudioUrl(''); // Clear URL if file is selected
-                    setTranscript(''); // Clear transcript if file is selected
+                    const files = Array.from(e.target.files || []);
+                    setAudioFiles(files);
+                    setAudioUrl(''); // Clear URL if files are selected
+                    setTranscript(''); // Clear transcript if files are selected
                   }}
                   className="block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-antique-gold/10 dark:file:bg-antique-gold/20 file:text-antique-gold-700 dark:file:text-antique-gold hover:file:bg-antique-gold/20 dark:hover:file:bg-antique-gold/30"
                 />
                 <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                  MP3 or WAV file, max 50MB
+                  MP3 or WAV files, max 50MB each. Select multiple files to create multiple notes at once.
                 </p>
+                {audioFiles.length > 0 && (
+                  <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                    <strong>{audioFiles.length} file{audioFiles.length !== 1 ? 's' : ''} selected:</strong>
+                    <ul className="ml-4 mt-1 list-disc">
+                      {audioFiles.map((file, idx) => (
+                        <li key={idx}>{file.name}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
 
               <div className="relative">
@@ -357,7 +402,7 @@ export default function NewNotePage() {
                   value={audioUrl}
                   onChange={(e) => {
                     setAudioUrl(e.target.value);
-                    setAudioFile(null); // Clear file if URL is entered
+                    setAudioFiles([]); // Clear files if URL is entered
                     setTranscript(''); // Clear transcript if URL is entered
                   }}
                   className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 shadow-sm focus:border-royal-ink dark:focus:border-antique-gold focus:outline-none focus:ring-royal-ink dark:focus:ring-antique-gold"
@@ -384,7 +429,7 @@ export default function NewNotePage() {
                   value={transcript}
                   onChange={(e) => {
                     setTranscript(e.target.value);
-                    setAudioFile(null); // Clear file if transcript is entered
+                    setAudioFiles([]); // Clear files if transcript is entered
                     setAudioUrl(''); // Clear URL if transcript is entered
                   }}
                   className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 shadow-sm focus:border-royal-ink dark:focus:border-antique-gold focus:outline-none focus:ring-royal-ink dark:focus:ring-antique-gold font-mono text-sm"

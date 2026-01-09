@@ -1,450 +1,87 @@
-# EkoInk App - Development Memory
+# EkoInk App - Quick Reference
 
-## Project Overview
-EkoInk is a handwritten thank you note automation system for car dealerships. Sales representatives submit deal information via a public form, and the system generates personalized AI-powered thank you notes that can be sent as handwritten cards.
+## What This Is
+Automated handwritten thank you notes for sales teams. Sales reps submit deals → AI generates personalized notes → Send as physical handwritten cards.
 
-## Current Status (Updated: November 5, 2025)
+## Tech Stack
+- **Framework:** Next.js 15.5.5 (App Router)
+- **Database:** Supabase (PostgreSQL)
+- **Auth:** Supabase Auth (email/password)
+- **AI:** Anthropic Claude (claude-3-haiku-20240307) + AssemblyAI (transcription)
+- **Payments:** Stripe (credit system)
+- **Handwriting:** Handwrite.io API
+- **Styling:** Tailwind CSS
 
-### ✅ Working Features
-1. **Authentication System**
-   - Email/password authentication via Supabase Auth
-   - Login page at `/login`
-   - Protected dashboard routes with middleware
-   - User: corbinbrandonwilliams@gmail.com (password: password123)
+## Working Features
+1. Public deal submission form (`/submit`)
+2. Dashboard with notes list
+3. AI note generation (transcribes calls, generates 270-320 char notes)
+4. Note approval and editing
+5. Handwrite.io integration (send physical cards)
+6. Stripe credit purchasing
+7. Team management (managers can invite reps)
+8. Payment history tracking
 
-2. **Public Deal Submission Form** (`/submit`)
-   - Collects customer information (name, product, deal value, personal details)
-   - Optional audio call recording (MP3 upload or URL)
-   - Creates deal, call, and note records in one transaction
-   - Publicly accessible (no auth required)
+## Database Tables
+- `users` - User accounts with roles (rep/manager/executive)
+- `accounts` - Company accounts with shared credit pool
+- `deals` - Customer deal information
+- `calls` - Call recordings and transcripts
+- `notes` - AI-generated thank you notes
+- `transactions` - Credit purchase history
 
-3. **Dashboard** (`/dashboard`)
-   - Shows recent deals
-   - Navigation to view all notes
+## Key Files
+**API Routes:**
+- `/app/api/notes/[noteId]/generate/route.ts` - AI note generation (533 lines - needs simplification)
+- `/app/api/notes/[noteId]/approve/route.ts` - Approve notes
+- `/app/api/notes/[noteId]/send/route.ts` - Send to Handwrite.io
+- `/app/api/stripe/webhook/route.ts` - Handle Stripe payments
 
-4. **Notes Management** (`/dashboard/notes`)
-   - Server component with proper authentication
-   - Lists all notes for the logged-in user
-   - Shows note status (pending, draft, approved, sent)
-   - Generate Note button for pending notes
-   - Review & Approve button for draft notes
-
-5. **AI Note Generation** (`/api/notes/[noteId]/generate`)
-   - **Transcription**: Uses AssemblyAI to transcribe call audio (if provided)
-   - **Key Moments**: Extracts important moments from transcript
-   - **AI Writing**: Uses Anthropic Claude (claude-3-haiku-20240307) to generate personalized thank you notes
-   - Notes are 60-80 words, warm/genuine tone, reference specific details
-   - Updates note status to 'draft' after generation
-
-### 🔧 Technical Stack
-- **Framework**: Next.js 15.5.5 (App Router)
-- **Database**: Supabase (PostgreSQL)
-- **Authentication**: Supabase Auth
-- **AI Services**:
-  - Anthropic Claude API (claude-3-haiku-20240307) - for note generation
-  - AssemblyAI - for audio transcription
-- **Styling**: Tailwind CSS
-- **File Storage**: Supabase Storage (call-audio bucket)
-
-### 📁 Key Files
-
-#### API Routes
-- `/app/api/deals/route.ts` - Create deals, calls, and notes from public form submissions
-- `/app/api/notes/route.ts` - Fetch notes with authentication
-- `/app/api/notes/[noteId]/generate/route.ts` - Generate AI thank you notes from call data
-
-#### Pages
-- `/app/login/page.tsx` - Login page
-- `/app/submit/page.tsx` - Public deal submission form
+**Pages:**
 - `/app/dashboard/page.tsx` - Main dashboard
-- `/app/dashboard/notes/page.tsx` - Notes list (server component)
-- `/app/dashboard/notes/GenerateNoteButton.tsx` - Client component for generate button
+- `/app/dashboard/notes/page.tsx` - Notes list
+- `/app/dashboard/team/page.tsx` - Team management (managers only)
 
-#### Configuration
-- `/lib/supabase/server.ts` - Supabase server client utilities
-  - `createClient()` - Regular client with user auth
-  - `createServiceClient()` - Service role client (bypasses RLS)
-- `/middleware.ts` - Route protection for dashboard
-- `/.env.local` - Environment variables (see below)
+**Utilities:**
+- `/lib/supabase/server.ts` - Supabase clients (`createClient()` and `createServiceClient()`)
+- `/lib/handwriteio.ts` - Handwrite.io API wrapper
+- `/middleware.ts` - Auth protection for dashboard routes
 
-### 🔑 Environment Variables
-```
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL=https://vszhsjpmlufjmmbswvov.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+## Environment Setup
+Copy `.env.local.example` to `.env.local` and add:
+- Supabase URL and keys
+- Anthropic API key
+- AssemblyAI API key
+- Handwrite.io API key
+- Stripe keys (for payments)
 
-# OpenAI (currently not in use - switched to Anthropic)
-OPENAI_API_KEY=sk-proj-4EOFCLz7YOfmldLrGNqWTsD...
+## Known Issues
+1. **AI generation is over-engineered** - Multi-shot with scoring (533 lines). Should be simplified to ~150 lines.
+2. **Join Team feature needs testing** - `/app/api/team/join/route.ts` - verify it works end-to-end
+3. **Next.js 15 warnings** - Need to await `params` and `cookies()` in some routes (not breaking)
 
-# Anthropic (ACTIVE)
-ANTHROPIC_API_KEY=sk-ant-api03-[REDACTED]
+## Important Notes
+- Always use `createServiceClient()` for admin operations that bypass RLS
+- Public form uses service client to create records for any user_id
+- Clear `.next` cache if seeing stale data: `rm -rf .next`
+- Anthropic and AssemblyAI APIs cost money - monitor usage
 
-# AssemblyAI
-ASSEMBLYAI_API_KEY=d2fecc53765a4dc2808f83a0081fd3e7
-```
-
-### 🗄️ Database Schema
-
-#### Tables
-1. **users** (Supabase Auth managed)
-   - Standard Supabase auth.users table
-
-2. **deals**
-   - `id` (uuid, primary key)
-   - `user_id` (uuid, references auth.users)
-   - `customer_first_name`, `customer_last_name`
-   - `customer_email`, `customer_phone`
-   - `product_name`
-   - `deal_value` (numeric)
-   - `personal_detail` (text)
-   - `created_at`
-
-3. **calls**
-   - `id` (uuid, primary key)
-   - `user_id` (uuid, references auth.users)
-   - `mp3_url` (text) - Direct URL to MP3
-   - `mp3_storage_path` (text) - Path in Supabase storage
-   - `transcript` (text) - Generated by AssemblyAI
-   - `key_moments` (text) - Extracted important moments
-   - `transcript_status` (text: pending/processing/complete/failed)
-   - `transcribed_at` (timestamp)
-   - `created_at`
-
-4. **notes**
-   - `id` (uuid, primary key)
-   - `user_id` (uuid, references auth.users)
-   - `deal_id` (uuid, references deals)
-   - `call_id` (uuid, references calls, nullable)
-   - `draft_text` (text) - AI-generated draft
-   - `final_text` (text) - Approved version
-   - `status` (text: pending/draft/approved/sent/failed)
-   - `requires_approval` (boolean, default: true)
-   - `approved_at`, `sent_at`
-   - `created_at`, `updated_at`
-
-#### RLS Policies
-- All tables have RLS enabled
-- Users can only access their own data
-- Public insert on deals/calls/notes for the submission form (sets user_id from form data)
-
-### 🚀 Recent Changes
-
-#### November 6, 2025 - AI Learning System Implementation
-- **Complete AI learning system built!** 🎉
-- **Phase 1: Improved Base AI Generation**
-  - Updated prompt to target 250-320 characters (was inconsistent before)
-  - Added validation with retry logic (up to 2 attempts)
-  - Increased transcript context from 1000 to 2000 characters
-  - Lowered temperature from 0.8 to 0.7 for consistency
-  - Added inline example in prompt for better guidance
-  - Emergency truncation for over-limit notes
-
-- **Phase 2: Edit Tracking System**
-  - Captures diff between AI draft and user's final version
-  - Stores detailed feedback in `notes.feedback_changes` JSONB field
-  - Tracks: character count, word count, sentence count, length delta
-  - Also tracks intermediate edits via PATCH endpoint
-  - All edits stored in `notes.feedback_text` for learning
-
-- **Phase 3: Learning Engine**
-  - New endpoint: `/api/learning/analyze-style`
-  - Automatically triggered when user completes note #25
-  - Uses Claude Sonnet to analyze first 10 approved notes
-  - Extracts comprehensive style profile: tone, structure, phrases, examples
-  - Stores in `users.tone_preferences` JSONB field
-  - Sets `learning_complete = true` when done
-
-- **Phase 4: Personalized Generation**
-  - Generation endpoint now checks for learned style
-  - If `learning_complete = true`, uses personalized prompt
-  - Injects: tone description, common phrases, sentence structure, best examples
-  - Temperature lowered to 0.6 for learned style (more consistency)
-  - Falls back to default prompt for first 25 notes
-
-- **Phase 5: Auto-Send After Learning**
-  - After note #25, notes are automatically sent after approval
-  - No manual "Send" button needed once learning is complete
-  - UI shows "Note approved and automatically sent!" message
-  - Still deducts credits and logs events properly
-
-**How It Works:**
-1. **Notes 1-25**: Rep edits each note, system learns their style
-2. **Note #25**: Triggers AI analysis of all previous notes
-3. **Note #26+**: AI generates in rep's learned style, auto-sends after approval
-
-**Files Modified:**
-- `/app/api/notes/[noteId]/generate/route.ts` - Improved prompt, validation, learned style
-- `/app/api/notes/[noteId]/approve/route.ts` - Edit tracking, auto-send trigger
-- `/app/api/notes/[noteId]/route.ts` - Intermediate edit tracking
-- `/app/api/learning/analyze-style/route.ts` - NEW: Style analysis engine
-- `/app/dashboard/notes/[id]/NoteEditor.tsx` - Auto-send UI feedback
-
-#### November 5, 2025 - UI/UX Improvements & Team Planning
-- Added EkoInk logo as favicon (icon.png in /app directory)
-- Updated all dashboard headers with cream background (#f8f7f2) to match logo
-- Increased logo size in headers (h-8 to h-12)
-- Added payment history feature to settings page
-  - Created PaymentHistory.tsx component
-  - Created /api/user/transactions endpoint
-  - Updated webhook and process-session APIs to log transactions
-- Added real-time credit balance fetching on credits page
-- Improved dark mode styling throughout the app
-- **Team Management Planning:**
-  - Comprehensive analysis of hierarchical team system
-  - Defined 4 user personas (Solo Rep, Team Rep, Manager, Executive, Super Admin)
-  - Created detailed implementation plan for role-based access
-  - Planned MVP features (simplified approach focusing on Manager + Rep roles)
-  - See HIERARCHICAL_TEAMS_PLAN.md for full details
-
-#### Previous Session
-
-#### Password Authentication Added
-- Switched from magic links to password authentication
-- Created script to add password to existing user: `/scripts/add-password.js`
-- User corbinbrandonwilliams@gmail.com now has password: password123
-
-#### Fixed Authentication Issues
-- Refactored `/dashboard/notes/page.tsx` from client to server component
-- Fixed logout issues when clicking navigation
-- Created separate client component for Generate button
-
-#### Fixed Note Display Logic
-- Updated `/app/api/deals/route.ts` to set `status: 'pending'` instead of 'draft' for new notes
-- Fixed conditional logic to show Generate button for empty/pending notes
-- Notes without content now show "Note content not yet generated" message
-
-#### Switched from OpenAI to Anthropic
-- OpenAI API quota was exceeded
-- Integrated Anthropic Claude API for note generation
-- Using model: `claude-3-haiku-20240307`
-- User added $10 in Anthropic API credits
-- Successfully generating personalized thank you notes
-
-#### Cache Clearing
-- Had to clear Next.js cache (`.next` folder) and restart dev server
-- Old compiled versions were using outdated model names
-- Fresh server now correctly uses claude-3-haiku-20240307
-
-### ⚠️ Known Issues
-1. **Next.js 15 Async API Warnings** (not breaking, just warnings):
-   - `params` should be awaited in API routes
-   - `cookies()` should be awaited in server components
-   - These are Next.js 15 requirements but app works fine without fixing
-
-2. **Multiple Dev Servers Running**
-   - Several background dev servers accumulated during development
-   - Should kill old ones: 658883, 24bcc6, 0b6394, d5604d, 3d1ba3
-   - Active server: faef7d
-
-3. **🔴 CRITICAL: Join Team Feature Not Working (November 6, 2025)**
-   - **Issue**: The "Join a Team" feature in Settings is not working properly
-   - **Location**: `/app/dashboard/settings/SettingsClient.tsx` - "Join a Team" section
-   - **API Endpoint**: `/app/api/team/join/route.ts`
-   - **What it should do**: Allow solo reps to enter a manager's invite code and join their team after signup
-   - **Current Status**: User reports it's not working (needs debugging)
-   - **Context**:
-     - User can sign up normally without invite code
-     - Then go to Settings and enter manager's invite code (e.g., `250262e5`)
-     - Should update their `manager_id` and `account_id` to join the team
-     - This is an alternative to the invite link signup flow
-   - **Priority**: HIGH - This is an important feature for user experience
-   - **Next Steps**:
-     - Test the flow end-to-end
-     - Check browser console for errors
-     - Verify API endpoint is being called
-     - Check database to see if user record is being updated
-     - May need to add better error handling/logging
-
-### 📝 Next Steps / TODO
-
-#### Priority 1: Team Management System (MVP)
-1. **Database Migration**
-   - Run hierarchical teams migration (see migrations/ folder)
-   - Add role, manager_id, invite_code fields to users table
-   - Update RLS policies for role-based access
-
-2. **Sign-up Flow Enhancement**
-   - Add role selection (Solo Rep, Manager, Team Rep)
-   - Implement invite code system
-   - Handle team joining via invite links
-
-3. **Manager Dashboard**
-   - Create /dashboard/team page
-   - Show team members list
-   - Display team statistics
-   - Add invite link generator
-   - Credit purchasing for team
-
-4. **Role-Based UI**
-   - Show/hide features based on user role
-   - Update navigation for managers
-   - Add team credits display for reps
-
-#### Priority 2: Enhancements
-1. **Executive Dashboard** (when needed)
-   - Company-wide analytics
-   - Multi-team management
-   - Bulk credit purchasing
-
-2. **Super Admin Dashboard** (for you)
-   - All companies view
-   - Revenue analytics
-   - System monitoring
-
-3. **Advanced Features**
-   - Email notifications
-   - Webhook API for CRM integrations
-   - Advanced analytics & reporting
-   - Bulk operations
-
-### 🎯 Current Working State
-The application is **fully functional** for the core workflow:
-1. Submit deal via public form ✓
-2. Login to dashboard ✓
-3. View all notes ✓
-4. Generate AI-powered thank you notes ✓
-5. Review & approve notes ✓
-6. Send to Handwrite.io ✓
-7. Track delivery ✓
-8. Purchase credits via Stripe ✓
-9. View payment history ✓
-
-**Working perfectly for single users. Next step: Add team management for managers who want to oversee multiple sales reps.**
-
-### 📊 Files Created This Session
-- `app/icon.png` - EkoInk logo favicon
-- `app/dashboard/settings/PaymentHistory.tsx` - Payment history component
-- `app/api/user/transactions/route.ts` - API to fetch transaction history
-- `app/api/user/credits/route.ts` - API to fetch current credit balance
-- `HIERARCHICAL_TEAMS_PLAN.md` - Comprehensive plan for team management system
-- `migrations/001-hierarchical-teams.sql` - Database migration for teams (ready but not run yet)
-- `migrations/README.md` - Migration instructions
-- `app/api/invites/generate/route.ts` - Generate invite codes API
-- `app/api/invites/validate/route.ts` - Validate invite codes API
-- Updated sign-up page with role selection UI
-
-### 🎨 UI/UX Changes This Session
-1. **Header Styling:**
-   - Changed background from white to cream (#f8f7f2) to blend with logo
-   - Increased logo size from h-8 to h-12 (50% larger)
-   - Applied across all dashboard pages
-
-2. **Settings Page:**
-   - Added full payment history section
-   - Shows all credit purchases with dates, amounts, and credits added
-   - Includes loading and empty states
-   - Full dark mode support
-
-3. **Credits Page:**
-   - Added real-time credit balance display
-   - Shows current balance at top of page
-   - Updates dynamically after purchase
-
-4. **Favicon:**
-   - EkoInk logo now appears in browser tab
-   - Works across all pages
-
-### 🚀 Team Management System - Ready to Build
-**Current State:** Fully planned and designed, code partially written but not deployed
-
-**What's Done:**
-- ✅ Database schema designed
-- ✅ Migration SQL written (not run yet)
-- ✅ Sign-up flow updated with role selection
-- ✅ Invite API endpoints created
-- ✅ User personas defined
-- ✅ Complete implementation plan documented
-
-**What's NOT Done Yet:**
-- ❌ Database migration not run
-- ❌ Manager dashboard doesn't exist
-- ❌ Team members list not built
-- ❌ Role-based navigation not implemented
-- ❌ Credit purchasing restrictions not added
-
-**To Continue:**
-1. Review the plan in HIERARCHICAL_TEAMS_PLAN.md
-2. Run the database migration (migrations/001-hierarchical-teams.sql)
-3. Test the sign-up flow with different roles
-4. Build the manager dashboard (/dashboard/team)
-
-### 🎯 Key Design Decisions Made
-
-#### MVP Scope (Simplified Approach)
-**Decision:** Start with only 2 roles (Rep + Manager), not the full 4-tier system
-- Solo Rep: Individual users who buy their own credits
-- Team Rep: Part of a team, manager buys credits
-- Manager: Oversees team, invites reps, purchases credits
-- ~~Executive~~ - Deferred until a customer needs it
-- ~~Super Admin~~ - You can use SQL/Supabase dashboard for now
-
-**Rationale:**
-- Faster to market
-- Less complexity to debug
-- Can add executive/admin later when needed
-- Most early customers will be managers with small teams
-
-#### Invite System Design
-**Decision:** One permanent invite code per manager (not one-time use)
-- Manager gets one code: `ekoink.com/signup?code=ABC123`
-- Code is permanent (doesn't expire by default)
-- Can be shared via email, Slack, etc.
-- Manager can regenerate if compromised
-
-**Rationale:**
-- Simpler than managing multiple codes
-- Less friction for team onboarding
-- Can add expiration/one-time-use later if needed
-
-#### Credit Management
-**Decision:** All credits at account level (company-wide pool)
-- No team-level credit separation
-- Managers/Executives purchase for entire account
-- All team members pull from same pool
-
-**Rationale:**
-- Much simpler to implement
-- Avoids "which pool do I use?" confusion
-- Can add team-level credits later if requested
-- Most customers prefer centralized billing
-
-#### Data Privacy
-**Decision:** Managers CAN see team member note content
-- Full visibility for coaching/QA
-- Not just stats, actual note text
-
-**Rationale:**
-- Managers need to coach their team
-- Quality control requires seeing actual content
-- Can add privacy toggle later if needed
-
-#### Approval Workflow
-**Decision:** Start with auto-approve (rep creates → sent immediately)
-- No manager approval required by default
-- Trust team members
-
-**Rationale:**
-- Faster workflow
-- Less micromanagement
-- Can add approval workflow later if requested
-- Most teams want speed over control
-
-### 💡 Important Notes for Next Developer
-- Always use `createServiceClient()` for operations that bypass RLS
-- The public form uses service client to create records for any user_id
-- Notes page is a server component - keep auth logic there
-- When making changes to API routes, clear `.next` cache and restart dev server
-- Anthropic API credits are at $10 - monitor usage
-- AssemblyAI transcription costs money - be mindful of audio file sizes
-
-### 🐛 Debugging Tips
-1. If seeing stale data, clear `.next` folder: `rm -rf .next`
-2. Check dev server logs for API errors
-3. Verify environment variables are loaded: check "Environments: .env.local" in startup logs
-4. Use Supabase dashboard to inspect database directly
-5. Check Anthropic console for API usage and credits
-
-### 📞 Contact
-- User email: corbinbrandonwilliams@gmail.com
+## Test User
+- Email: corbinbrandonwilliams@gmail.com
+- Password: password123
 - Supabase Project: https://vszhsjpmlufjmmbswvov.supabase.co
+
+## Quick Start
+```bash
+npm install
+# Add .env.local with required keys
+npm run dev
+# Visit http://localhost:3000
+```
+
+## What Needs Work
+See `CLEANUP-ANALYSIS.md` for detailed cleanup plan. Main items:
+- Simplify AI generation route (533 → 150 lines)
+- Consolidate migration files
+- Test team management features
+- Remove incomplete API billing system (or finish it)

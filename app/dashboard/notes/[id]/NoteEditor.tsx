@@ -2,20 +2,25 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import FeedbackModal from './FeedbackModal';
 
 interface NoteEditorProps {
   note: any;
+  userNotesSentCount?: number;
 }
 
-export default function NoteEditor({ note }: NoteEditorProps) {
+export default function NoteEditor({ note, userNotesSentCount = 0 }: NoteEditorProps) {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [noteText, setNoteText] = useState(note.draft_text || note.final_text || '');
+  const [originalDraft] = useState(note.draft_text || note.final_text || '');
   const [isSaving, setIsSaving] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -47,7 +52,13 @@ export default function NoteEditor({ note }: NoteEditorProps) {
     }
   };
 
-  const handleApprove = async () => {
+  const handleApprove = () => {
+    // Show feedback modal before approving
+    setShowFeedbackModal(true);
+  };
+
+  const handleFeedbackSubmit = async (feedbackText: string) => {
+    setShowFeedbackModal(false);
     setIsApproving(true);
     setError(null);
     setSuccess(null);
@@ -60,6 +71,7 @@ export default function NoteEditor({ note }: NoteEditorProps) {
         },
         body: JSON.stringify({
           final_text: noteText,
+          feedback_text: feedbackText || undefined,
         }),
       });
 
@@ -127,13 +139,55 @@ export default function NoteEditor({ note }: NoteEditorProps) {
     }
   };
 
+  const handleDelete = async () => {
+    if (!confirm('Are you sure you want to delete this note? This action cannot be undone.')) {
+      return;
+    }
+
+    setIsDeleting(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await fetch(`/api/notes/${note.id}`, {
+        method: 'DELETE',
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to delete note');
+      }
+
+      setSuccess('Note deleted successfully');
+
+      // Redirect to notes list after brief delay
+      setTimeout(() => {
+        router.push('/dashboard/notes');
+      }, 1000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete note');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const wordCount = noteText.trim().split(/\s+/).filter(Boolean).length;
   const charCount = noteText.length;
   const isWithinRange = wordCount >= 40 && wordCount <= 80;
   const isUnderCharLimit = charCount <= 320;
 
   return (
-    <div className="rounded-lg bg-white p-6 shadow">
+    <>
+      <FeedbackModal
+        isOpen={showFeedbackModal}
+        onClose={() => setShowFeedbackModal(false)}
+        onSubmit={handleFeedbackSubmit}
+        originalDraft={originalDraft}
+        editedText={noteText}
+        notesSentCount={userNotesSentCount}
+      />
+      <div className="rounded-lg bg-white p-6 shadow">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-lg font-semibold text-gray-900">Thank You Note</h2>
         <div className="flex items-center gap-4">
@@ -212,11 +266,16 @@ export default function NoteEditor({ note }: NoteEditorProps) {
 
       {/* Action Buttons */}
       <div className="flex items-center justify-between border-t border-gray-200 pt-4">
-        <div>
-          {note.status === 'draft' && !isEditing && (
-            <p className="text-sm text-gray-600">
-              Review the note and make any edits before approving.
-            </p>
+        <div className="flex items-center gap-3">
+          {/* Delete button - only show if note hasn't been sent */}
+          {note.status !== 'sent' && !note.sent_at && (
+            <button
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="rounded-md border border-red-300 bg-white px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50"
+            >
+              {isDeleting ? 'Deleting...' : 'Delete Note'}
+            </button>
           )}
         </div>
 
@@ -307,6 +366,7 @@ export default function NoteEditor({ note }: NoteEditorProps) {
           </p>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }

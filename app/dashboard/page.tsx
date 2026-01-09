@@ -15,7 +15,7 @@ export default async function DashboardPage() {
     redirect('/login');
   }
 
-  // Get user data with account credits
+  // Get user data with account credits and admin status
   let { data: user, error: userError } = await supabaseAdmin
     .from('users')
     .select(`
@@ -25,7 +25,8 @@ export default async function DashboardPage() {
       role,
       account_id,
       accounts:account_id (
-        credits_remaining
+        credits_remaining,
+        is_admin
       )
     `)
     .eq('email', authUser.email)
@@ -135,6 +136,7 @@ export default async function DashboardPage() {
   }
 
   const credits = (user.accounts as any)?.credits_remaining || 0;
+  const isAdmin = (user.accounts as any)?.is_admin || false;
 
   // Get note counts
   const { count: notesSent } = await supabaseAdmin
@@ -212,6 +214,14 @@ export default async function DashboardPage() {
               >
                 Settings
               </Link>
+              {isAdmin && (
+                <Link
+                  href="/dashboard/admin"
+                  className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-royal-ink dark:hover:text-antique-gold transition-colors"
+                >
+                  Admin
+                </Link>
+              )}
               <LogoutButton />
             </div>
           </div>

@@ -20,7 +20,7 @@ export default async function NoteDetailPage({ params }: { params: Promise<{ id:
   // Get user's account
   const { data: user } = await supabaseAdmin
     .from('users')
-    .select('account_id, id, role')
+    .select('account_id, id, role, notes_sent_count')
     .eq('email', authUser.email)
     .single();
 
@@ -263,7 +263,7 @@ export default async function NoteDetailPage({ params }: { params: Promise<{ id:
 
           {/* Right Column - Note Editor */}
           <div className="lg:col-span-2">
-            <NoteEditor note={note} />
+            <NoteEditor note={note} userNotesSentCount={user?.notes_sent_count || 0} />
           </div>
         </div>
       </main>

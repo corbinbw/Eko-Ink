@@ -19,8 +19,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get form data
-    const formData = await request.formData();
+    // Get form data with error handling
+    let formData: FormData;
+    try {
+      formData = await request.formData();
+    } catch (formError) {
+      console.error('FormData parse error:', formError);
+      return NextResponse.json(
+        { error: 'Failed to parse form data. Please try again.' },
+        { status: 400 }
+      );
+    }
 
     // Extract deal details
     const customerFirstName = formData.get('customerFirstName') as string;
@@ -36,6 +45,7 @@ export async function POST(request: NextRequest) {
     const personalDetail = formData.get('personalDetail') as string;
 
     const audioFile = formData.get('audioFile') as File | null;
+    const audioFiles = formData.getAll('audioFiles') as File[];
     const audioUrl = formData.get('audioUrl') as string | null;
     const transcript = formData.get('transcript') as string | null;
 
@@ -102,11 +112,40 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to get or create user' }, { status: 500 });
     }
 
-    // Handle audio upload if file provided
-    let mp3StoragePath = null;
-    let mp3Url = audioUrl;
+    // Handle audio upload(s)
+    let mp3StoragePaths: string[] = [];
+    let mp3Urls: string[] = [];
 
-    if (audioFile) {
+    // Handle multiple files
+    if (audioFiles.length > 0) {
+      for (const file of audioFiles) {
+        const fileName = `${userData.account_id}/${Date.now()}-${file.name}`;
+
+        const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
+          .from('call-audio')
+          .upload(fileName, file, {
+            contentType: file.type,
+            upsert: false,
+          });
+
+        if (uploadError) {
+          throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`);
+        }
+
+        mp3StoragePaths.push(uploadData.path);
+
+        // Generate signed URL for AssemblyAI to access
+        const { data: urlData } = await supabaseAdmin.storage
+          .from('call-audio')
+          .createSignedUrl(uploadData.path, 3600); // 1 hour
+
+        if (urlData?.signedUrl) {
+          mp3Urls.push(urlData.signedUrl);
+        }
+      }
+    }
+    // Handle single file (legacy support)
+    else if (audioFile) {
       const fileName = `${userData.account_id}/${Date.now()}-${audioFile.name}`;
 
       const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
@@ -120,14 +159,20 @@ export async function POST(request: NextRequest) {
         throw new Error(`Failed to upload audio: ${uploadError.message}`);
       }
 
-      mp3StoragePath = uploadData.path;
+      mp3StoragePaths.push(uploadData.path);
 
       // Generate signed URL for AssemblyAI to access
       const { data: urlData } = await supabaseAdmin.storage
         .from('call-audio')
-        .createSignedUrl(mp3StoragePath, 3600); // 1 hour
+        .createSignedUrl(uploadData.path, 3600); // 1 hour
 
-      mp3Url = urlData?.signedUrl || null;
+      if (urlData?.signedUrl) {
+        mp3Urls.push(urlData.signedUrl);
+      }
+    }
+    // Handle URL
+    else if (audioUrl) {
+      mp3Urls.push(audioUrl);
     }
 
     // Create deal
@@ -158,16 +203,22 @@ export async function POST(request: NextRequest) {
       throw new Error(`Failed to create deal: ${dealError.message}`);
     }
 
-    // Create call record
+    // Create call record with multiple audio files support
     const { data: call, error: callError } = await supabaseAdmin
       .from('calls')
       .insert({
         deal_id: deal.id,
-        mp3_url: audioUrl,
-        mp3_storage_path: mp3StoragePath,
+        mp3_url: mp3Urls.length > 0 ? mp3Urls[0] : null, // Store first URL for backward compatibility
+        mp3_storage_path: mp3StoragePaths.length > 0 ? mp3StoragePaths[0] : null, // Store first path
         transcript: transcript || null,
         transcript_status: transcript ? 'complete' : 'pending',
         transcribed_at: transcript ? new Date().toISOString() : null,
+        // Store all URLs/paths in metadata if multiple files
+        metadata: mp3Urls.length > 1 || mp3StoragePaths.length > 1 ? {
+          all_audio_urls: mp3Urls,
+          all_storage_paths: mp3StoragePaths,
+          file_count: mp3Urls.length || mp3StoragePaths.length,
+        } : null,
       })
       .select()
       .single();
@@ -198,7 +249,7 @@ export async function POST(request: NextRequest) {
     console.log(`Auto-triggering note generation for note ${note.id}`);
 
     // Call the generation endpoint (fire and forget - don't block response)
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3006';
     fetch(`${baseUrl}/api/notes/${note.id}/generate`, {
       method: 'POST',
       headers: {

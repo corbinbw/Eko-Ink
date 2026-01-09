@@ -1,6 +1,80 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ noteId: string }> }
+) {
+  try {
+    const { noteId } = await params;
+    const supabase = await createClient();
+    const supabaseAdmin = createServiceClient();
+
+    // Check authentication
+    const {
+      data: { user: authUser },
+    } = await supabase.auth.getUser();
+
+    if (!authUser) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Get user
+    const { data: user } = await supabaseAdmin
+      .from('users')
+      .select('id')
+      .eq('email', authUser.email)
+      .single();
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // Get the note to check if it's been sent
+    const { data: note } = await supabaseAdmin
+      .from('notes')
+      .select('status, sent_at')
+      .eq('id', noteId)
+      .eq('user_id', user.id)
+      .single();
+
+    if (!note) {
+      return NextResponse.json({ error: 'Note not found' }, { status: 404 });
+    }
+
+    // Prevent deletion if note has been sent
+    if (note.status === 'sent' || note.sent_at) {
+      return NextResponse.json(
+        { error: 'Cannot delete a note that has already been sent' },
+        { status: 403 }
+      );
+    }
+
+    // Delete the note
+    const { error: deleteError } = await supabaseAdmin
+      .from('notes')
+      .delete()
+      .eq('id', noteId)
+      .eq('user_id', user.id);
+
+    if (deleteError) {
+      console.error('Error deleting note:', deleteError);
+      return NextResponse.json(
+        { error: 'Failed to delete note' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ success: true, message: 'Note deleted successfully' });
+  } catch (error) {
+    console.error('Error in DELETE /api/notes/[noteId]:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ noteId: string }> }

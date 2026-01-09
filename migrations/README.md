@@ -107,8 +107,72 @@ DROP FUNCTION IF EXISTS get_team_members(UUID);
 -- Restore original RLS policies (see supabase-migration.sql for originals)
 ```
 
-## Next Steps
+## Migration 007: Consolidated Handwriting and Signatures
 
-After running this migration, continue with Sprint 2 to build the manager dashboard and team management UI.
+This migration adds fields for Handwrite.io integration and user signatures.
 
-See the main implementation plan in the project root for details.
+**To run:** Copy contents of `007-consolidated-handwriting-and-signatures.sql` and run in Supabase SQL Editor.
+
+**What it does:**
+- Adds Handwrite.io order tracking fields to `notes` table
+- Adds signature image fields to `users` table
+
+## Storage Setup: Signatures Bucket
+
+**Create via Supabase Dashboard:**
+1. Go to Storage → Create new bucket
+2. Name: `signatures`, Public: `false`, Size limit: `2MB`
+3. Allowed types: `image/png, image/jpeg, image/svg+xml`
+
+**Or run this SQL:**
+```sql
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES ('signatures', 'signatures', false, 2097152, ARRAY['image/png', 'image/jpeg', 'image/svg+xml']);
+
+-- Storage policies for user signatures
+CREATE POLICY "Users can upload their own signature"
+  ON storage.objects FOR INSERT
+  WITH CHECK (bucket_id = 'signatures' AND auth.role() = 'authenticated' AND (storage.foldername(name))[1] = auth.uid()::text);
+
+CREATE POLICY "Users can view their own signature"
+  ON storage.objects FOR SELECT
+  USING (bucket_id = 'signatures' AND auth.role() = 'authenticated' AND (storage.foldername(name))[1] = auth.uid()::text);
+```
+
+Storage path: `signatures/{user_id}/signature.png`
+
+## Migration 008: Fact Extraction and Edit Tracking
+
+**Purpose:** Adds structured fact extraction and edit delta tracking for improved AI generation.
+
+**To run:** Copy contents of `008-add-fact-extraction-and-edit-tracking.sql` and run in Supabase SQL Editor.
+
+**What it does:**
+- Adds `facts_json` to `calls` table - stores structured facts extracted from transcripts
+- Adds `extraction_status` to `calls` table - tracks fact extraction progress
+- Adds `edit_delta` to `notes` table - tracks user edits to learn their style
+- Creates indexes for performance
+
+**New Features Enabled:**
+1. **Fact-based Generation:** AI uses structured facts instead of raw transcripts
+2. **Hallucination Prevention:** Only uses facts actually mentioned in calls
+3. **Style Learning:** Each edit updates the rep's voice profile automatically
+4. **Faster Generation:** Single-shot instead of multi-shot (2-3 sec vs 6-9 sec)
+
+**Verification:**
+```sql
+-- Check that new columns exist
+SELECT column_name, data_type
+FROM information_schema.columns
+WHERE table_name = 'calls'
+AND column_name IN ('facts_json', 'extraction_status');
+
+SELECT column_name, data_type
+FROM information_schema.columns
+WHERE table_name = 'notes'
+AND column_name = 'edit_delta';
+```
+
+## Handwrite.io Integration
+
+See `HANDWRITEIO_INTEGRATION.md` for complete integration details, testing checklist, and troubleshooting.

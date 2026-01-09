@@ -32,7 +32,7 @@ export async function POST(
 
     // Parse request body
     const body = await request.json();
-    const { final_text } = body;
+    const { final_text, feedback_text } = body;
 
     if (!final_text) {
       return NextResponse.json(
@@ -59,20 +59,64 @@ export async function POST(
     // Calculate diff between AI draft and user's final version
     const originalDraft = existingNote.draft_text || '';
     const userFinal = final_text;
+    const wasEdited = originalDraft !== userFinal;
+
+    // Extract what changed for learning
+    const originalWords = new Set(originalDraft.toLowerCase().split(/\s+/).filter(Boolean));
+    const finalWords = new Set(userFinal.toLowerCase().split(/\s+/).filter(Boolean));
+
+    const phrasesAdded: string[] = [];
+    const phrasesRemoved: string[] = [];
+
+    if (wasEdited) {
+      // Find phrases user added (simple 2-3 word phrases)
+      const finalSentences = userFinal.split(/[.!?]+/).filter(Boolean);
+      const originalSentences = originalDraft.split(/[.!?]+/).filter(Boolean);
+
+      finalSentences.forEach(sentence => {
+        const words = sentence.trim().split(/\s+/);
+        for (let i = 0; i < words.length - 1; i++) {
+          const phrase = words.slice(i, i + 2).join(' ');
+          if (phrase.length > 5 && !originalDraft.toLowerCase().includes(phrase.toLowerCase())) {
+            phrasesAdded.push(phrase);
+          }
+        }
+      });
+
+      // Find phrases user removed
+      originalSentences.forEach(sentence => {
+        const words = sentence.trim().split(/\s+/);
+        for (let i = 0; i < words.length - 1; i++) {
+          const phrase = words.slice(i, i + 2).join(' ');
+          if (phrase.length > 5 && !userFinal.toLowerCase().includes(phrase.toLowerCase())) {
+            phrasesRemoved.push(phrase);
+          }
+        }
+      });
+    }
 
     // Analyze the changes
+    const editDelta = {
+      original_length: originalDraft.length,
+      final_length: userFinal.length,
+      length_delta: userFinal.length - originalDraft.length,
+      was_edited: wasEdited,
+      phrases_added: phrasesAdded.slice(0, 5), // Limit to top 5
+      phrases_removed: phrasesRemoved.slice(0, 5),
+      edit_timestamp: new Date().toISOString(),
+    };
+
+    // Legacy feedback_changes for compatibility
     const feedbackChanges = {
       original_text: originalDraft,
       final_text: userFinal,
       original_length: originalDraft.length,
       final_length: userFinal.length,
       length_delta: userFinal.length - originalDraft.length,
-      was_edited: originalDraft !== userFinal,
+      was_edited: wasEdited,
       edit_timestamp: new Date().toISOString(),
-      // Simple word-level analysis
       original_word_count: originalDraft.split(/\s+/).filter(Boolean).length,
       final_word_count: userFinal.split(/\s+/).filter(Boolean).length,
-      // Sentence count
       original_sentences: originalDraft.split(/[.!?]+/).filter(Boolean).length,
       final_sentences: userFinal.split(/[.!?]+/).filter(Boolean).length,
     };
@@ -84,8 +128,10 @@ export async function POST(
         final_text,
         status: 'approved',
         approved_at: new Date().toISOString(),
-        feedback_given: originalDraft !== userFinal, // True if user made changes
+        feedback_given: wasEdited,
+        feedback_text: feedback_text || null,
         feedback_changes: feedbackChanges,
+        edit_delta: editDelta, // NEW: Track specific changes for learning
       })
       .eq('id', noteId)
       .eq('user_id', user.id)
@@ -104,10 +150,73 @@ export async function POST(
     const newCount = (user.notes_sent_count || 0) + 1;
     const reachedLearningThreshold = newCount === 25;
 
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // YOUR CORE IDEA: Update voice profile based on edits immediately
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    // Get current tone_preferences
+    const { data: currentUser } = await supabaseAdmin
+      .from('users')
+      .select('tone_preferences')
+      .eq('id', user.id)
+      .single();
+
+    let updatedTonePrefs = currentUser?.tone_preferences || {};
+
+    if (wasEdited) {
+      // Update common phrases (add what user added)
+      const existingPhrases = new Set(updatedTonePrefs.common_phrases || []);
+      phrasesAdded.forEach(phrase => {
+        if (phrase.length > 5) {
+          existingPhrases.add(phrase);
+        }
+      });
+
+      // Update banned phrases (what user removed)
+      const existingBanned = new Set(updatedTonePrefs.banned_phrases || []);
+      phrasesRemoved.forEach(phrase => {
+        if (phrase.length > 5) {
+          existingBanned.add(phrase);
+        }
+      });
+
+      // Update average length
+      const avgLength = updatedTonePrefs.avg_length || 290;
+      const newAvgLength = Math.round((avgLength * 0.8) + (userFinal.length * 0.2)); // Weighted average
+
+      updatedTonePrefs = {
+        ...updatedTonePrefs,
+        common_phrases: Array.from(existingPhrases).slice(-20), // Keep last 20
+        banned_phrases: Array.from(existingBanned).slice(-10), // Keep last 10
+        avg_length: newAvgLength,
+        best_examples: [
+          ...(updatedTonePrefs.best_examples || []).slice(-2), // Keep last 2
+          userFinal, // Add this new approved note
+        ],
+        last_updated: new Date().toISOString(),
+        notes_analyzed: newCount,
+      };
+
+      console.log(`[Learning] Updated voice profile: +${phrasesAdded.length} phrases, -${phrasesRemoved.length} banned, avg_length: ${newAvgLength}`);
+    } else {
+      // Even if not edited, add to examples
+      updatedTonePrefs = {
+        ...updatedTonePrefs,
+        best_examples: [
+          ...(updatedTonePrefs.best_examples || []).slice(-2),
+          userFinal,
+        ],
+        last_updated: new Date().toISOString(),
+        notes_analyzed: newCount,
+      };
+    }
+
+    // Update user with new count AND updated voice profile
     await supabaseAdmin
       .from('users')
       .update({
         notes_sent_count: newCount,
+        tone_preferences: updatedTonePrefs, // Update voice with each approval
       })
       .eq('id', user.id);
 
@@ -123,17 +232,17 @@ export async function POST(
       },
     });
 
-    // If this is the 25th note, trigger style analysis
+    // Trigger comprehensive style analysis at 25 notes
     let styleAnalysis = null;
-    if (reachedLearningThreshold) {
-      console.log(`User ${user.id} reached 25 notes - triggering style analysis`);
 
-      // Trigger style analysis (fire and forget - don't block the response)
+    if (reachedLearningThreshold) {
+      // Note #25: Full style analysis
+      console.log(`User ${user.id} reached 25 notes - triggering FULL style analysis`);
+
       fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/learning/analyze-style`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          // Forward the auth cookie
           cookie: request.headers.get('cookie') || '',
         },
       }).catch(err => {
@@ -142,7 +251,15 @@ export async function POST(
 
       styleAnalysis = {
         triggered: true,
-        message: 'Style analysis will be processed in the background',
+        type: 'full',
+        message: 'Comprehensive style analysis will be processed in the background',
+      };
+    } else {
+      // Notes 1-24: Voice profile updates happen immediately above (edit delta tracking)
+      styleAnalysis = {
+        triggered: false,
+        type: 'organic',
+        message: `Voice profile updated organically (note ${newCount}/25)`,
       };
     }
 
